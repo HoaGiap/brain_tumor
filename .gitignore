@@ -1,0 +1,25 @@
+# Models and Large Files
+checkpoints/
+data/
+*.h5
+*.pth
+*.pt
+*.pkl
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.venv
+venv/
+ENV/
+env/
+.env
+
+# OS/System
+.DS_Store
+Thumbs.db
+
+# IDEs
+.vscode/
+.idea/
