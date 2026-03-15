@@ -90,7 +90,7 @@ def predict_single(
     tensor: torch.Tensor,
 ) -> np.ndarray:
     logits = model(tensor)
-    probs  = F.softmax(logits, dim=1)[0].cpu().numpy()
+    probs  = F.softmax(logits, dim=1)[0].cpu().detach().numpy()
     return probs  # (num_classes,)
 
 

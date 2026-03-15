@@ -233,23 +233,24 @@ class GradCAM:
         weights = grads.mean(dim=(1, 2))  # (C,)
 
         # Weighted combination of activation maps
-        cam = torch.zeros(acts.shape[1:], dtype=torch.float32)
+        cam = torch.zeros(acts.shape[1:], dtype=torch.float32, device=acts.device)
         for i, w in enumerate(weights):
             cam += w * acts[i]
 
         cam = F.relu(cam)                 # ReLU — chỉ lấy positive contributions
 
-        # Normalize
-        cam = cam.numpy()
+        cam = cam.cpu().detach().numpy()
+        if smooth:
+            cam = cv2.GaussianBlur(cam, (7, 7), 0)
+
+        # Normalize after smoothing to preserve peak
         cam_min, cam_max = cam.min(), cam.max()
         if cam_max > cam_min:
             cam = (cam - cam_min) / (cam_max - cam_min + 1e-8)
         else:
             cam = np.zeros_like(cam)
 
-        if smooth:
-            cam = cv2.GaussianBlur(cam, (7, 7), 0)
-            cam = np.clip(cam, 0, 1)
+        cam = np.clip(cam, 0, 1)
 
         return cam, int(class_idx), confidences
 
@@ -292,18 +293,20 @@ class GradCAMPlusPlus(GradCAM):
         relu_grad = F.relu(score.exp() * grads)
         weights = (alpha * relu_grad).sum(dim=(1, 2))    # (C,)
 
-        cam = torch.zeros(acts.shape[1:], dtype=torch.float32)
+        cam = torch.zeros(acts.shape[1:], dtype=torch.float32, device=acts.device)
         for i, w in enumerate(weights):
             cam += w * acts[i]
 
-        cam = F.relu(cam).numpy()
+        cam = F.relu(cam).cpu().detach().numpy()
+        if smooth:
+            cam = cv2.GaussianBlur(cam, (7, 7), 0)
+
+        # Normalize after smoothing to preserve peak
         cam_min, cam_max = cam.min(), cam.max()
         if cam_max > cam_min:
             cam = (cam - cam_min) / (cam_max - cam_min + 1e-8)
 
-        if smooth:
-            cam = cv2.GaussianBlur(cam, (7, 7), 0)
-            cam = np.clip(cam, 0, 1)
+        cam = np.clip(cam, 0, 1)
 
         return cam, int(class_idx), confidences
 
@@ -390,6 +393,11 @@ def build_efficientnet(pretrained=True, mode="finetune") -> BrainTumorModel:
 
 def get_gradcam(model: BrainTumorModel, variant: str = "gradcam") -> GradCAM:
     """Khởi tạo Grad-CAM cho model."""
+    target_layer = model.gradcam_layer
+    if model.backbone_name == "resnet50":
+        # Target layer cụ thể hơn cho ResNet50 để tăng độ chính xác (last conv của block cuối)
+        target_layer = model.feature_extractor[7][-1].conv3
+
     if variant == "gradcam++":
-        return GradCAMPlusPlus(model, model.gradcam_layer)
-    return GradCAM(model, model.gradcam_layer)
+        return GradCAMPlusPlus(model, target_layer)
+    return GradCAM(model, target_layer)
