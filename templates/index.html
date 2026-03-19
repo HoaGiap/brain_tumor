@@ -1,711 +1,146 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1.0" />
-<title>NeuroScan AI — Brain Tumor MRI Classifier</title>
-<style>
-  @import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,300&display=swap');
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>NeuroScan AI — Brain Tumor MRI Classifier</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
 
-  :root {
-    --bg:        #07080d;
-    --surface:   #0d1117;
-    --surface2:  #111827;
-    --border:    #1c2433;
-    --border2:   #243040;
-    --text:      #cdd6f4;
-    --muted:     #6272a4;
-    --accent:    #00b4d8;
-    --accent2:   #48cae4;
-    --glioma:    #ff6b6b;
-    --meningo:   #ffa94d;
-    --pituitary: #cc99ff;
-    --notumor:   #69db7c;
-    --mono:      'Space Mono', monospace;
-    --sans:      'DM Sans', sans-serif;
-  }
-
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: var(--sans);
-    min-height: 100vh;
-    overflow-x: hidden;
-  }
-
-  /* ── Grid background ── */
-  body::before {
-    content: '';
-    position: fixed; inset: 0; pointer-events: none;
-    background-image:
-      linear-gradient(rgba(0,180,216,0.03) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(0,180,216,0.03) 1px, transparent 1px);
-    background-size: 40px 40px;
-    z-index: 0;
-  }
-
-  .container { max-width: 1100px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 1; }
-
-  /* ── Header ── */
-  header {
-    padding: 28px 0 20px;
-    border-bottom: 1px solid var(--border);
-  }
-  .header-inner {
-    display: flex; align-items: center; justify-content: space-between;
-    flex-wrap: wrap; gap: 16px;
-  }
-  .logo {
-    display: flex; align-items: center; gap: 14px;
-  }
-  .logo-icon {
-    width: 44px; height: 44px; border-radius: 12px;
-    background: linear-gradient(135deg, #00b4d8, #5e60ce);
-    display: flex; align-items: center; justify-content: center;
-    font-size: 22px; box-shadow: 0 0 24px rgba(0,180,216,0.35);
-    flex-shrink: 0;
-  }
-  .logo h1 {
-    font-family: var(--mono);
-    font-size: 18px; font-weight: 700; letter-spacing: -0.5px;
-  }
-  .logo h1 span { color: var(--accent); }
-  .logo p {
-    font-size: 10px; color: var(--muted);
-    font-family: var(--mono); letter-spacing: 1.5px; margin-top: 2px;
-  }
-  .status-pill {
-    display: flex; align-items: center; gap: 6px;
-    background: rgba(105,219,124,0.08); border: 1px solid rgba(105,219,124,0.25);
-    border-radius: 20px; padding: 5px 12px;
-    font-size: 11px; font-family: var(--mono); color: #69db7c;
-  }
-  .status-dot {
-    width: 6px; height: 6px; border-radius: 50%;
-    background: #69db7c; animation: blink 2s infinite;
-  }
-  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
-
-  /* ── Warning ── */
-  .warning {
-    margin: 16px 0;
-    background: rgba(255,193,7,0.06);
-    border: 1px solid rgba(255,193,7,0.2);
-    border-radius: 8px; padding: 10px 16px;
-    font-size: 12px; color: #ffd43b;
-    display: flex; gap: 8px; align-items: flex-start;
-  }
-
-  /* ── Main layout ── */
-  main { padding: 24px 0 48px; }
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
-  @media (max-width: 768px) { .grid { grid-template-columns: 1fr; } }
-
-  /* ── Card ── */
-  .card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 14px; overflow: hidden;
-  }
-  .card-header {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border);
-    display: flex; align-items: center; gap: 8px;
-    background: var(--surface2);
-  }
-  .card-title {
-    font-family: var(--mono);
-    font-size: 10px; font-weight: 700;
-    letter-spacing: 1.5px; color: var(--muted);
-    text-transform: uppercase;
-  }
-  .card-body { padding: 16px; }
-
-  /* ── Drop zone ── */
-  .drop-zone {
-    border: 2px dashed var(--border2);
-    border-radius: 12px; padding: 40px 20px;
-    text-align: center; cursor: pointer;
-    transition: all 0.2s; background: rgba(255,255,255,0.01);
-    min-height: 160px;
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    gap: 10px;
-  }
-  .drop-zone:hover, .drop-zone.drag-over {
-    border-color: var(--accent);
-    background: rgba(0,180,216,0.04);
-  }
-  .drop-zone .icon { font-size: 36px; opacity: 0.5; }
-  .drop-zone p { font-size: 13px; color: var(--muted); }
-  .drop-zone small { font-size: 11px; color: var(--border2); font-family: var(--mono); }
-
-  /* ── Image preview ── */
-  .img-wrapper {
-    position: relative;
-    border-radius: 12px; overflow: hidden;
-    background: #000; display: none;
-  }
-  .img-wrapper.visible { display: block; }
-  .img-wrapper img { width: 100%; display: block; }
-  .img-badge {
-    position: absolute; top: 10px; right: 10px;
-    padding: 4px 10px; border-radius: 6px;
-    font-size: 10px; font-family: var(--mono); font-weight: 700;
-    letter-spacing: 1px;
-  }
-  .img-badge.positive {
-    background: rgba(255,107,107,0.15); border: 1px solid #ff6b6b; color: #ff6b6b;
-  }
-  .img-badge.negative {
-    background: rgba(105,219,124,0.15); border: 1px solid #69db7c; color: #69db7c;
-  }
-
-  /* ── Scan animation ── */
-  .scan-overlay {
-    position: absolute; inset: 0; pointer-events: none;
-    overflow: hidden; display: none;
-  }
-  .scan-overlay.active { display: block; }
-  .scan-line {
-    position: absolute; left: 0; right: 0; height: 2px;
-    background: linear-gradient(90deg, transparent, var(--accent), transparent);
-    box-shadow: 0 0 10px var(--accent);
-    animation: scanDown 1.8s linear infinite;
-  }
-  @keyframes scanDown { 0%{top:-2px} 100%{top:100%} }
-
-  /* ── Buttons ── */
-  .btn-row { display: flex; gap: 8px; margin-top: 12px; }
-  .btn {
-    padding: 9px 16px; border-radius: 8px; border: none;
-    font-family: var(--sans); font-size: 13px; font-weight: 600;
-    cursor: pointer; transition: all 0.2s;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .btn-primary {
-    background: var(--accent); color: #000; flex: 2;
-    justify-content: center;
-    box-shadow: 0 4px 16px rgba(0,180,216,0.3);
-  }
-  .btn-primary:hover:not(:disabled) {
-    background: var(--accent2); transform: translateY(-1px);
-    box-shadow: 0 6px 20px rgba(0,180,216,0.4);
-  }
-  .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
-  .btn-secondary { background: var(--surface2); border: 1px solid var(--border2); color: var(--muted); flex: 1; justify-content: center; }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
-
-  /* ── Results area ── */
-  .result-empty {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; min-height: 300px; gap: 12px;
-    color: var(--border2);
-  }
-  .result-empty span { font-size: 40px; opacity: 0.3; }
-  .result-empty p { font-size: 13px; text-align: center; line-height: 1.6; }
-
-  /* ── Diagnosis card ── */
-  .diagnosis {
-    border-radius: 10px; padding: 16px;
-    margin-bottom: 14px; animation: fadeUp 0.4s ease;
-  }
-  @keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
-  .diagnosis-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-  .diagnosis-label { font-size: 9px; font-family: var(--mono); letter-spacing: 2px; color: var(--muted); margin-bottom: 4px; }
-  .diagnosis-name { font-size: 22px; font-weight: 700; line-height: 1.1; }
-  .diagnosis-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
-  .severity-badge { text-align: center; border-radius: 8px; padding: 6px 12px; min-width: 80px; }
-  .severity-badge .s-label { font-size: 9px; color: var(--muted); font-family: var(--mono); }
-  .severity-badge .s-value { font-size: 14px; font-weight: 700; margin-top: 1px; }
-
-  /* ── Location chip ── */
-  .location-chip {
-    background: var(--surface2); border-radius: 6px;
-    padding: 8px 12px; font-size: 12px; color: #94a3b8;
-    display: flex; gap: 6px; align-items: center;
-    border: 1px solid var(--border);
-  }
-
-  /* ── Confidence bars ── */
-  .conf-section { margin-bottom: 14px; }
-  .conf-title { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 10px; }
-  .conf-row { margin-bottom: 8px; }
-  .conf-meta { display: flex; justify-content: space-between; margin-bottom: 3px; }
-  .conf-meta span { font-size: 12px; color: #94a3b8; }
-  .conf-meta strong { font-family: var(--mono); font-size: 12px; }
-  .conf-track { height: 6px; background: var(--surface2); border-radius: 3px; overflow: hidden; border: 1px solid var(--border); }
-  .conf-fill { height: 100%; border-radius: 3px; transition: width 1.2s cubic-bezier(0.4,0,0.2,1); width: 0; }
-
-  /* ── Clinical notes ── */
-  .note-box {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 14px; margin-bottom: 12px;
-  }
-  .note-box .note-title { font-family: var(--mono); font-size: 9px; letter-spacing: 2px; color: var(--muted); margin-bottom: 7px; }
-  .note-box p { font-size: 13px; color: #94a3b8; line-height: 1.65; }
-
-  /* ── Grad-CAM section ── */
-  .gradcam-section { margin-top: 16px; }
-  .gradcam-tabs { display: flex; gap: 6px; margin-bottom: 10px; }
-  .gtab {
-    padding: 5px 12px; border-radius: 6px; border: 1px solid var(--border);
-    background: none; color: var(--muted); font-size: 11px;
-    font-family: var(--mono); cursor: pointer; transition: all 0.15s;
-  }
-  .gtab.active, .gtab:hover {
-    border-color: var(--accent); color: var(--accent); background: rgba(0,180,216,0.06);
-  }
-  .gradcam-img-wrap { position: relative; border-radius: 10px; overflow: hidden; background: #000; }
-  .gradcam-img-wrap img { width: 100%; display: block; }
-  .gradcam-legend {
-    position: absolute; bottom: 0; left: 0; right: 0;
-    background: linear-gradient(transparent, rgba(0,0,0,0.8));
-    padding: 20px 12px 10px;
-    display: flex; align-items: center; gap: 6px;
-  }
-  .legend-bar {
-    flex: 1; height: 6px; border-radius: 3px;
-    background: linear-gradient(90deg, #000080, #0000ff, #00ffff, #ffff00, #ff0000);
-  }
-  .legend-bar span { font-size: 10px; color: #aaa; font-family: var(--mono); }
-
-  /* ── Per-model compare ── */
-  .model-compare { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 12px; }
-  .model-card {
-    background: var(--surface2); border: 1px solid var(--border);
-    border-radius: 8px; padding: 10px 12px;
-  }
-  .model-card .model-name { font-family: var(--mono); font-size: 9px; color: var(--muted); letter-spacing: 1px; margin-bottom: 8px; }
-  .model-card .model-row { display: flex; justify-content: space-between; margin-bottom: 3px; }
-  .model-card .model-row span { font-size: 11px; color: #64748b; }
-  .model-card .model-row strong { font-family: var(--mono); font-size: 11px; }
-
-  /* ── Loading ── */
-  .loading-state {
-    display: flex; flex-direction: column; align-items: center;
-    justify-content: center; min-height: 300px; gap: 16px;
-  }
-  .spinner { font-size: 36px; animation: spin 2s linear infinite; }
-  @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-  .loading-state p { font-size: 13px; color: var(--accent); font-weight: 500; }
-  .loading-state small { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-  .dots span { display: inline-block; animation: dot-pulse 1.2s infinite; }
-  .dots span:nth-child(2) { animation-delay: 0.2s; }
-  .dots span:nth-child(3) { animation-delay: 0.4s; }
-  @keyframes dot-pulse { 0%,80%,100%{transform:scale(0.6);opacity:0.4} 40%{transform:scale(1);opacity:1} }
-
-  /* ── Error ── */
-  .error-box {
-    background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25);
-    border-radius: 8px; padding: 12px 14px; margin-top: 12px;
-    font-size: 13px; color: #ffa8a8; display: none;
-  }
-  .error-box.visible { display: block; }
-
-  /* ── Footer ── */
-  footer {
-    border-top: 1px solid var(--border); padding: 16px 0;
-    text-align: center; font-size: 11px; color: var(--border2); font-family: var(--mono);
-  }
-
-  /* ── Color vars for classes ── */
-  .c-glioma     { color: var(--glioma); }
-  .c-meningioma { color: var(--meningo); }
-  .c-pituitary  { color: var(--pituitary); }
-  .c-notumor    { color: var(--notumor); }
-  .bg-glioma     { background: rgba(255,107,107,0.08); border-color: rgba(255,107,107,0.2); }
-  .bg-meningioma { background: rgba(255,169,77,0.08);  border-color: rgba(255,169,77,0.2); }
-  .bg-pituitary  { background: rgba(204,153,255,0.08); border-color: rgba(204,153,255,0.2); }
-  .bg-notumor    { background: rgba(105,219,124,0.08); border-color: rgba(105,219,124,0.2); }
-  .sev-high   { background: rgba(255,107,107,0.08); border: 1px solid rgba(255,107,107,0.25); color: #ff6b6b; }
-  .sev-medium { background: rgba(255,169,77,0.08);  border: 1px solid rgba(255,169,77,0.25);  color: #ffa94d; }
-  .sev-low    { background: rgba(105,219,124,0.08); border: 1px solid rgba(105,219,124,0.25); color: #69db7c; }
-  .sev-none   { background: rgba(105,219,124,0.08); border: 1px solid rgba(105,219,124,0.25); color: #69db7c; }
-</style>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}?v=1.1">
 </head>
+
 <body>
-<header>
-  <div class="container">
-    <div class="header-inner">
-      <div class="logo">
-        <div class="logo-icon">🧠</div>
+  <header>
+    <div class="container">
+      <div class="header-inner">
+        <div class="logo">
+          <div class="logo-icon"><i class="fa-solid fa-brain"></i></div>
+          <div>
+            <h1>NeuroScan <span>AI</span></h1>
+            <p>HỆ THỐNG PHÂN LOẠI KHỐI U NÃO · RESNET50 + EFFICIENTNET-B0 · GRAD-CAM</p>
+          </div>
+        </div>
+        <div class="status-pill">
+          <div class="status-dot"></div>
+          Med-AI
+        </div>
+      </div>
+      <!-- <div class="warning">
+        <span>⚠</span>
+        <span>Công cụ <strong>hỗ trợ nghiên cứu</strong> — KHÔNG thay thế chẩn đoán y tế chuyên nghiệp.
+          Mọi kết quả cần được xác nhận bởi bác sĩ chuyên khoa.</span>
+      </div> -->
+    </div>
+  </header>
+
+  <main>
+    <div class="container">
+      <div class="grid">
+
+        <!-- ── LEFT: Upload + Image ── -->
         <div>
-          <h1>NeuroScan <span>AI</span></h1>
-          <p>HỆ THỐNG PHÂN LOẠI KHỐI U NÃO · RESNET50 + EFFICIENTNET-B0 · GRAD-CAM</p>
+          <div class="card">
+            <div class="card-header">
+              <span>🩻</span>
+              <span class="card-title">Ảnh MRI đầu vào</span>
+            </div>
+            <div class="card-body">
+
+              <!-- Drop zone -->
+              <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
+                <div class="icon">🩻</div>
+                <p>Kéo thả hoặc click để chọn ảnh MRI</p>
+                <small>JPG · PNG · BMP · TIFF</small>
+              </div>
+
+              <!-- Image preview -->
+              <div class="img-wrapper" id="imgWrapper">
+                <img id="previewImg" src="" alt="MRI Preview" />
+                <div class="scan-overlay" id="scanOverlay">
+                  <div class="scan-line"></div>
+                </div>
+                <div class="img-badge" id="imgBadge"></div>
+              </div>
+
+              <input type="file" id="fileInput" accept="image/*" style="display:none"
+                onchange="handleFile(this.files[0])" />
+
+              <div class="btn-row" id="btnRow" style="display:none">
+                <button class="btn btn-secondary" onclick="resetAll()"><i class="fa-solid fa-arrows-rotate"></i> Đổi
+                  ảnh</button>
+                <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">
+                  <i class="fa-solid fa-microscope"></i> Phân tích MRI
+                </button>
+              </div>
+
+              <div class="error-box" id="errorBox"></div>
+            </div>
+          </div>
+
+          <!-- Grad-CAM section -->
+          <div class="card gradcam-section" id="gradcamCard" style="display:none; margin-top:16px;">
+            <div class="card-header">
+              <span><i class="fa-solid fa-fire-flame-curved"></i></span>
+              <span class="card-title">Grad-CAM++ · Vùng AI quan sát</span>
+            </div>
+            <div class="card-body">
+              <div class="gradcam-tabs" id="gradcamTabs"></div>
+              <div class="gradcam-img-wrap">
+                <img id="gradcamImg" src="" alt="Grad-CAM" />
+                <div class="gradcam-legend">
+                  <span style="font-size:10px;color:#aaa;font-family:var(--mono)">Thấp</span>
+                  <div class="legend-bar"></div>
+                  <span style="font-size:10px;color:#aaa;font-family:var(--mono)">Cao</span>
+                </div>
+              </div>
+              <p style="margin-top:8px;font-size:11px;color:var(--muted);font-family:var(--mono)">
+                Vùng màu đỏ/vàng = AI tập trung quan sát mạnh nhất
+              </p>
+            </div>
+          </div>
         </div>
-      </div>
-      <div class="status-pill">
-        <div class="status-dot"></div>
-        API ONLINE
-      </div>
-    </div>
-    <div class="warning">
-      <span>⚠</span>
-      <span>Công cụ <strong>hỗ trợ nghiên cứu</strong> — KHÔNG thay thế chẩn đoán y tế chuyên nghiệp.
-      Mọi kết quả cần được xác nhận bởi bác sĩ chuyên khoa.</span>
-    </div>
-  </div>
-</header>
 
-<main>
-  <div class="container">
-    <div class="grid">
-
-      <!-- ── LEFT: Upload + Image ── -->
-      <div>
-        <div class="card">
-          <div class="card-header">
-            <span>🩻</span>
-            <span class="card-title">Ảnh MRI đầu vào</span>
-          </div>
-          <div class="card-body">
-
-            <!-- Drop zone -->
-            <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-              <div class="icon">🩻</div>
-              <p>Kéo thả hoặc click để chọn ảnh MRI</p>
-              <small>JPG · PNG · BMP · TIFF</small>
+        <!-- ── RIGHT: Results ── -->
+        <div>
+          <div class="card" style="min-height:400px;">
+            <div class="card-header">
+              <span><i class="fa-solid fa-chart-column"></i></span>
+              <span class="card-title">Kết quả phân tích</span>
             </div>
-
-            <!-- Image preview -->
-            <div class="img-wrapper" id="imgWrapper">
-              <img id="previewImg" src="" alt="MRI Preview" />
-              <div class="scan-overlay" id="scanOverlay"><div class="scan-line"></div></div>
-              <div class="img-badge" id="imgBadge"></div>
-            </div>
-
-            <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFile(this.files[0])"/>
-
-            <div class="btn-row" id="btnRow" style="display:none">
-              <button class="btn btn-secondary" onclick="resetAll()">🔄 Đổi ảnh</button>
-              <button class="btn btn-primary" id="analyzeBtn" onclick="analyze()">
-                🔬 Phân tích MRI
-              </button>
-            </div>
-
-            <div class="error-box" id="errorBox"></div>
-          </div>
-        </div>
-
-        <!-- Grad-CAM section -->
-        <div class="card gradcam-section" id="gradcamCard" style="display:none; margin-top:16px;">
-          <div class="card-header">
-            <span>🔥</span>
-            <span class="card-title">Grad-CAM++ · Vùng AI quan sát</span>
-          </div>
-          <div class="card-body">
-            <div class="gradcam-tabs" id="gradcamTabs"></div>
-            <div class="gradcam-img-wrap">
-              <img id="gradcamImg" src="" alt="Grad-CAM" />
-              <div class="gradcam-legend">
-                <span style="font-size:10px;color:#aaa;font-family:var(--mono)">Thấp</span>
-                <div class="legend-bar"></div>
-                <span style="font-size:10px;color:#aaa;font-family:var(--mono)">Cao</span>
+            <div class="card-body" id="resultBody">
+              <div class="result-empty">
+                <span><i class="fa-solid fa-chart-column"></i></span>
+                <p>Tải ảnh MRI và nhấn<br /><strong style="color:var(--accent)">Phân tích MRI</strong><br />để xem kết
+                  quả</p>
               </div>
             </div>
-            <p style="margin-top:8px;font-size:11px;color:var(--muted);font-family:var(--mono)">
-              Vùng màu đỏ/vàng = AI tập trung quan sát mạnh nhất
-            </p>
           </div>
-        </div>
-      </div>
 
-      <!-- ── RIGHT: Results ── -->
-      <div>
-        <div class="card" style="min-height:400px;">
-          <div class="card-header">
-            <span>📊</span>
-            <span class="card-title">Kết quả phân tích</span>
-          </div>
-          <div class="card-body" id="resultBody">
-            <div class="result-empty">
-              <span>📊</span>
-              <p>Tải ảnh MRI và nhấn<br/><strong style="color:var(--accent)">Phân tích MRI</strong><br/>để xem kết quả</p>
+          <!-- Per-model comparison -->
+          <div class="card" id="modelCompareCard" style="display:none; margin-top:16px;">
+            <div class="card-header">
+              <span><i class="fa-solid fa-scale-balanced"></i></span>
+              <span class="card-title">So sánh từng mô hình</span>
+            </div>
+            <div class="card-body">
+              <div class="model-compare" id="modelCompare"></div>
             </div>
           </div>
         </div>
 
-        <!-- Per-model comparison -->
-        <div class="card" id="modelCompareCard" style="display:none; margin-top:16px;">
-          <div class="card-header">
-            <span>⚖️</span>
-            <span class="card-title">So sánh từng mô hình</span>
-          </div>
-          <div class="card-body">
-            <div class="model-compare" id="modelCompare"></div>
-          </div>
-        </div>
       </div>
-
     </div>
-  </div>
-</main>
+  </main>
 
-<footer>
-  <div class="container">
-    NEUROSCAN AI · ResNet50 + EfficientNet-B0 + Grad-CAM++ · PyTorch · Flask ·
-    Dữ liệu: Kaggle Brain Tumor MRI Dataset · Demo Research Tool Only
-  </div>
-</footer>
+  <footer>
+    <div class="container">
+      NEUROSCAN AI · ResNet50 + EfficientNet-B0 + Grad-CAM++ · PyTorch ·
+      Dữ liệu: Kaggle Brain Tumor MRI Dataset
+    </div>
+  </footer>
 
-<script>
-  // ─── Config ─────────────────────────────────────────────────────────────────
-  const API_BASE = "http://localhost:5000";  // Đổi URL nếu deploy server khác
-
-  const CLASS_COLORS = {
-    glioma:     "#ff6b6b",
-    meningioma: "#ffa94d",
-    pituitary:  "#cc99ff",
-    notumor:    "#69db7c",
-  };
-  const CLASS_VI = {
-    glioma:     "U thần kinh đệm",
-    meningioma: "U màng não",
-    pituitary:  "U tuyến yên",
-    notumor:    "Không có u",
-  };
-
-  let currentFile = null;
-  let currentGradcamData = {};
-
-  // ─── File Handling ───────────────────────────────────────────────────────────
-  const dropZone   = document.getElementById("dropZone");
-  const imgWrapper = document.getElementById("imgWrapper");
-  const previewImg = document.getElementById("previewImg");
-  const btnRow     = document.getElementById("btnRow");
-  const analyzeBtn = document.getElementById("analyzeBtn");
-  const scanOverlay= document.getElementById("scanOverlay");
-  const errorBox   = document.getElementById("errorBox");
-  const imgBadge   = document.getElementById("imgBadge");
-
-  ["dragover","dragenter"].forEach(e => dropZone.addEventListener(e, ev => {
-    ev.preventDefault(); dropZone.classList.add("drag-over");
-  }));
-  ["dragleave","drop"].forEach(e => dropZone.addEventListener(e, () =>
-    dropZone.classList.remove("drag-over")
-  ));
-  dropZone.addEventListener("drop", ev => {
-    ev.preventDefault();
-    const f = ev.dataTransfer.files[0];
-    if (f) handleFile(f);
-  });
-
-  function handleFile(file) {
-    if (!file || !file.type.startsWith("image/")) {
-      showError("Vui lòng chọn file ảnh hợp lệ (JPG, PNG...)");
-      return;
-    }
-    clearError();
-    resetResults();
-    currentFile = file;
-
-    const url = URL.createObjectURL(file);
-    previewImg.src = url;
-    dropZone.style.display = "none";
-    imgWrapper.classList.add("visible");
-    imgBadge.style.display = "none";
-    btnRow.style.display = "flex";
-  }
-
-  function resetAll() {
-    currentFile = null;
-    previewImg.src = "";
-    dropZone.style.display = "";
-    imgWrapper.classList.remove("visible");
-    btnRow.style.display = "none";
-    document.getElementById("fileInput").value = "";
-    resetResults();
-    clearError();
-  }
-
-  function resetResults() {
-    document.getElementById("resultBody").innerHTML = `
-      <div class="result-empty">
-        <span>📊</span>
-        <p>Tải ảnh MRI và nhấn<br/><strong style="color:var(--accent)">Phân tích MRI</strong><br/>để xem kết quả</p>
-      </div>`;
-    document.getElementById("gradcamCard").style.display = "none";
-    document.getElementById("modelCompareCard").style.display = "none";
-    imgBadge.style.display = "none";
-    scanOverlay.classList.remove("active");
-  }
-
-  // ─── Analyze ─────────────────────────────────────────────────────────────────
-  async function analyze() {
-    if (!currentFile) return;
-    setLoading(true);
-
-    const formData = new FormData();
-    formData.append("image", currentFile);
-
-    try {
-      const resp = await fetch(`${API_BASE}/predict?gradcam_model=both`, {
-        method: "POST",
-        body: formData,
-      });
-      if (!resp.ok) {
-        const err = await resp.json();
-        throw new Error(err.error || `HTTP ${resp.status}`);
-      }
-      const data = await resp.json();
-      renderResults(data);
-    } catch (e) {
-      showError(`Lỗi kết nối API: ${e.message}. Đảm bảo server Flask đang chạy tại ${API_BASE}`);
-      setLoading(false);
-    }
-  }
-
-  function setLoading(on) {
-    analyzeBtn.disabled = on;
-    if (on) {
-      scanOverlay.classList.add("active");
-      analyzeBtn.innerHTML = `<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Đang phân tích...`;
-      document.getElementById("resultBody").innerHTML = `
-        <div class="loading-state">
-          <div class="spinner">🧠</div>
-          <p>Đang phân tích MRI...</p>
-          <small>ResNet50 + EfficientNet-B0 + Grad-CAM</small>
-          <div class="dots"><span>●</span><span>●</span><span>●</span></div>
-        </div>`;
-    } else {
-      scanOverlay.classList.remove("active");
-      analyzeBtn.innerHTML = `🔬 Phân tích MRI`;
-    }
-  }
-
-  // ─── Render Results ───────────────────────────────────────────────────────────
-  function renderResults(data) {
-    setLoading(false);
-    const p = data.prediction;
-    const cls = p.class;
-    const color = CLASS_COLORS[cls] || "#cdd6f4";
-    const sev = data.severity;
-
-    // Badge trên ảnh
-    imgBadge.style.display = "block";
-    imgBadge.className = `img-badge ${p.has_tumor ? "positive" : "negative"}`;
-    imgBadge.textContent = p.has_tumor ? "⚠ PHÁT HIỆN BẤT THƯỜNG" : "✓ BÌNH THƯỜNG";
-
-    // ── Diagnosis block
-    let html = `
-      <div class="diagnosis bg-${cls}" style="border:1px solid ${color}25">
-        <div class="diagnosis-header">
-          <div>
-            <div class="diagnosis-label">KẾT QUẢ CHẨN ĐOÁN</div>
-            <div class="diagnosis-name c-${cls}">${p.class_vi}</div>
-            <div class="diagnosis-sub">${cls.toUpperCase()} · ${p.confidence}% tin cậy</div>
-          </div>
-          <div class="severity-badge sev-${sev.level}">
-            <div class="s-label">MỨC ĐỘ</div>
-            <div class="s-value">${sev.label}</div>
-          </div>
-        </div>
-      </div>`;
-
-    // ── Confidence bars
-    html += `
-      <div class="conf-section">
-        <div class="conf-title">ĐỘ TIN CẬY PHÂN LOẠI · ENSEMBLE</div>`;
-    const sorted = Object.entries(data.probabilities)
-      .sort((a,b) => b[1].score_pct - a[1].score_pct);
-    for (const [cn, info] of sorted) {
-      const c = CLASS_COLORS[cn] || "#cdd6f4";
-      html += `
-        <div class="conf-row">
-          <div class="conf-meta">
-            <span>${info.label_vi}</span>
-            <strong style="color:${c}">${info.score_pct}%</strong>
-          </div>
-          <div class="conf-track">
-            <div class="conf-fill" id="fill-${cn}" style="background:${c}; box-shadow:0 0 6px ${c}60"></div>
-          </div>
-        </div>`;
-    }
-    html += `</div>`;
-
-    // ── Clinical notes
-    html += `
-      <div class="note-box">
-        <div class="note-title">KHUYẾN NGHỊ</div>
-        <p>💡 ${data.recommendation}</p>
-      </div>`;
-
-    document.getElementById("resultBody").innerHTML = html;
-
-    // Animate bars
-    requestAnimationFrame(() => {
-      for (const [cn, info] of sorted) {
-        const el = document.getElementById(`fill-${cn}`);
-        if (el) el.style.width = `${info.score_pct}%`;
-      }
-    });
-
-    // ── Grad-CAM
-    currentGradcamData = data.gradcam || {};
-    renderGradcam();
-
-    // ── Per-model comparison
-    if (data.per_model && Object.keys(data.per_model).length > 1) {
-      renderModelCompare(data.per_model);
-    }
-  }
-
-  function renderGradcam() {
-    const keys = Object.keys(currentGradcamData).filter(k => currentGradcamData[k]);
-    if (!keys.length) return;
-
-    const card = document.getElementById("gradcamCard");
-    const tabs = document.getElementById("gradcamTabs");
-    const img  = document.getElementById("gradcamImg");
-
-    card.style.display = "block";
-    tabs.innerHTML = "";
-    keys.forEach((k, i) => {
-      const btn = document.createElement("button");
-      btn.className = `gtab ${i===0?"active":""}`;
-      btn.textContent = k === "resnet50" ? "ResNet50" : "EfficientNet-B0";
-      btn.onclick = () => {
-        document.querySelectorAll(".gtab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        img.src = currentGradcamData[k];
-      };
-      tabs.appendChild(btn);
-    });
-    img.src = currentGradcamData[keys[0]];
-  }
-
-  function renderModelCompare(perModel) {
-    const card = document.getElementById("modelCompareCard");
-    const container = document.getElementById("modelCompare");
-    card.style.display = "block";
-    container.innerHTML = Object.entries(perModel).map(([name, scores]) => {
-      const displayName = name === "resnet50" ? "ResNet50" : "EfficientNet-B0";
-      const rows = Object.entries(scores)
-        .sort((a,b) => b[1]-a[1])
-        .map(([cn, pct]) => `
-          <div class="model-row">
-            <span>${CLASS_VI[cn]}</span>
-            <strong style="color:${CLASS_COLORS[cn]}">${pct}%</strong>
-          </div>`).join("");
-      return `
-        <div class="model-card">
-          <div class="model-name">${displayName.toUpperCase()}</div>
-          ${rows}
-        </div>`;
-    }).join("");
-  }
-
-  // ─── Error handling ──────────────────────────────────────────────────────────
-  function showError(msg) {
-    errorBox.textContent = "⚠ " + msg;
-    errorBox.classList.add("visible");
-    setLoading(false);
-  }
-  function clearError() {
-    errorBox.classList.remove("visible");
-  }
-</script>
+  <script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
+
 </html>
