@@ -23,3 +23,8 @@ Thumbs.db
 # IDEs
 .vscode/
 .idea/
+
+# Custom Exclusions
+HUONG_DAN_CAI_DAT_CUDA.md
+HUONG_DAN_CHAY_SERVER.md
+Dockerfile
