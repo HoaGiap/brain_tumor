@@ -18,7 +18,7 @@ except ImportError:
     EFFICIENTNET_AVAILABLE = False
     print("[WARN] efficientnet_pytorch not installed. Using torchvision EfficientNet.")
 
-from src.dataset import NUM_CLASSES, CLASS_NAMES
+from src.config import NUM_CLASSES, CLASS_NAMES
 
 
 # ─── Base Model Wrapper ───────────────────────────────────────────────────────

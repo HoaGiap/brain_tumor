@@ -28,3 +28,4 @@ Thumbs.db
 HUONG_DAN_CAI_DAT_CUDA.md
 HUONG_DAN_CHAY_SERVER.md
 Dockerfile
+.dockerignore
