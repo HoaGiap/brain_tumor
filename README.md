@@ -1,249 +1,96 @@
 # 🧠 NeuroScan AI — Brain Tumor MRI Classifier
 
-Hệ thống phân loại khối u não trên ảnh MRI sử dụng **ResNet50** và **EfficientNet-B0**
-với trực quan hóa **Grad-CAM++**.
+Hệ thống phân loại khối u não trên ảnh MRI sử dụng **ResNet50** và **EfficientNet-B0** với trực quan hóa **Grad-CAM++**. Dự án đã được tối ưu hóa cho việc bảo trì, nâng cấp và triển khai chuyên nghiệp.
 
 ---
 
-## 📁 Cấu trúc dự án
+## 📁 Cấu trúc dự án (Đã Module hóa)
 
 ```
 brain_tumor/
 ├── src/
+│   ├── config.py         # ⚙️ Cấu hình tập trung (IMG_SIZE, CLASS, Port...)
 │   ├── dataset.py        # Data loading, augmentation (Albumentations)
-│   └── models.py         # ResNet50, EfficientNet-B0, Grad-CAM, Grad-CAM++
+│   ├── models.py         # ResNet50, EfficientNet-B0, Grad-CAM++
+│   └── ...
+├── static/               # 🎨 Assets cho Frontend
+│   ├── css/styles.css    # Định dạng và hiệu ứng giao diện
+│   └── js/main.js        # Logic tương tác và gọi API
 ├── templates/
-│   └── index.html        # Giao diện HTML+JS
-├── checkpoints/          # Checkpoint sau training
-├── logs/                 # TensorBoard logs
-├── train.py              # Script huấn luyện
-├── app.py                # Flask API backend
-└── requirements.txt
+│   └── index.html        # Giao diện khung (HTML)
+├── checkpoints/          # Lưu trữ trọng số mô hình đã huấn luyện
+├── tests/                # 🧪 Hệ thống kiểm thử tự động
+├── Dockerfile            # 🐳 Cấu hình đóng gói ứng dụng
+├── app.py                # Flask API & Web Server
+├── train.py              # Script huấn luyện mô hình
+└── requirements.txt      # Danh sách thư viện cần thiết
 ```
 
 ---
 
-## ⚙️ Cài đặt
+## ⚙️ Cài đặt & Khởi chạy nhanh
+
+### 1. Cài đặt môi trường
+
+Sử dụng **Python 3.8+** và chạy lệnh sau:
 
 ```bash
-# 1. Tạo virtual environment
-python -m venv venv
-source venv/bin/activate          # Linux/Mac
-venv\Scripts\activate             # Windows
-
-# 2. Cài dependencies
 pip install -r requirements.txt
 ```
 
----
+### 2. Chạy Server
 
-## 📦 Dữ liệu
-
-Tải từ Kaggle: **Brain Tumor MRI Dataset**
-- Link: https://www.kaggle.com/datasets/masoudnickparvar/brain-tumor-mri-dataset
-
-Sau khi tải về, giải nén thành cấu trúc:
-
-```
-data/
-├── Training/
-│   ├── glioma/          (~1321 ảnh)
-│   ├── meningioma/      (~1339 ảnh)
-│   ├── notumor/         (~1595 ảnh)
-│   └── pituitary/       (~1457 ảnh)
-└── Testing/
-    ├── glioma/          (~300 ảnh)
-    ├── meningioma/      (~306 ảnh)
-    ├── notumor/         (~405 ảnh)
-    └── pituitary/       (~300 ảnh)
-```
-
----
-
-## 🚀 Huấn luyện
-
-### Huấn luyện ResNet50
-```bash
-python train.py \
-  --backbone resnet50 \
-  --data ./data \
-  --epochs 50 \
-  --batch 32 \
-  --lr 1e-4 \
-  --mode finetune
-```
-
-### Huấn luyện EfficientNet-B0
-```bash
-python train.py \
-  --backbone efficientnet \
-  --data ./data \
-  --epochs 50 \
-  --batch 32 \
-  --lr 1e-4
-```
-
-### Huấn luyện cả hai cùng lúc
-```bash
-python train.py --backbone both --data ./data --epochs 50
-```
-
-### Các tham số quan trọng
-
-| Tham số | Mặc định | Mô tả |
-|---------|---------|-------|
-| `--backbone` | `both` | `resnet50` / `efficientnet` / `both` |
-| `--data` | `./data` | Thư mục dữ liệu |
-| `--epochs` | `50` | Số epoch |
-| `--batch` | `32` | Batch size |
-| `--lr` | `1e-4` | Learning rate |
-| `--mode` | `finetune` | `finetune` / `feature` / `partial` |
-| `--scheduler` | `cosine` | `cosine` / `onecycle` |
-| `--img-size` | `224` | Kích thước ảnh input |
-| `--no-amp` | False | Tắt mixed precision |
-
----
-
-## 🌐 Chạy API Server
+Sử dụng lệnh sau để khởi động hệ thống (thay đổi đường dẫn checkpoint của bạn):
 
 ```bash
-python app.py \
-  --resnet  checkpoints/resnet50/NGÀY/resnet50_best.pth \
-  --effnet  checkpoints/efficientnet/NGÀY/efficientnet_best.pth \
-  --port    5000
+python app.py --resnet checkpoints/resnet50/20260314_130801/resnet50_best.pth --effnet checkpoints/efficientnet/20260314_130441/efficientnet_best.pth
 ```
 
-Server sẽ khởi động tại: `http://localhost:5000`
+### 3. Truy cập giao diện
 
-### API Endpoints
+Mở trình duyệt và truy cập: **[http://localhost:5000](http://localhost:5000)**
 
-| Method | Endpoint | Mô tả |
-|--------|---------|-------|
-| GET | `/health` | Kiểm tra trạng thái server |
-| POST | `/predict` | Phân tích ảnh MRI |
+> **Lưu ý:** Không mở trực tiếp file `index.html`. Bạn phải truy cập qua URL của server để giao diện hiển thị đúng và kết nối được AI.
 
-### Ví dụ gọi API
+---
+
+## 🐳 Triển khai với Docker
+
+Nếu bạn muốn chạy ứng dụng trong môi trường container sạch sẽ:
 
 ```bash
-curl -X POST http://localhost:5000/predict \
-  -F "image=@/path/to/mri.jpg" \
-  -o result.json
-```
+# 1. Build image
+docker build -t neuroscan-ai .
 
-### Cấu trúc response
-
-```json
-{
-  "prediction": {
-    "class": "glioma",
-    "class_vi": "U thần kinh đệm",
-    "confidence": 94.2,
-    "has_tumor": true
-  },
-  "probabilities": {
-    "glioma":     {"score_pct": 94.2, "label_vi": "U thần kinh đệm"},
-    "meningioma": {"score_pct": 3.1,  "label_vi": "U màng não"},
-    "notumor":    {"score_pct": 1.9,  "label_vi": "Không có u"},
-    "pituitary":  {"score_pct": 0.8,  "label_vi": "U tuyến yên"}
-  },
-  "per_model": {
-    "resnet50": {"glioma": 93.1, ...},
-    "efficientnet": {"glioma": 95.3, ...}
-  },
-  "gradcam": {
-    "resnet50": "data:image/png;base64,...",
-    "efficientnet": "data:image/png;base64,..."
-  },
-  "severity": {"level": "high", "label": "Cao"},
-  "recommendation": "..."
-}
+# 2. Chạy container (Hỗ trợ GPU)
+docker run --gpus all -p 5000:5000 neuroscan-ai
 ```
 
 ---
 
-## 🖥️ Mở giao diện Web
+## 🧪 Kiểm thử (Testing)
 
-1. Chạy Flask server (xem phần trên)
-2. Mở file `templates/index.html` trong trình duyệt
-3. Upload ảnh MRI → Nhấn **Phân tích MRI**
-
----
-
-## 📈 Theo dõi training với TensorBoard
+Đảm bảo logic mô hình và cấu hình luôn ổn định:
 
 ```bash
-tensorboard --logdir ./checkpoints
-```
-
-Mở trình duyệt: `http://localhost:6006`
-
----
-
-## 🏗️ Kiến trúc chi tiết
-
-### ResNet50 (Fine-tuned)
-```
-ImageNet pretrained ResNet50
-  └── Feature Extractor (conv1 → layer4)  [Frozen / Fine-tuned]
-  └── AdaptiveAvgPool2d
-  └── Custom Classifier:
-        Dropout(0.4) → Linear(2048→512) → BN → ReLU
-        → Dropout(0.2) → Linear(512→4)
-Grad-CAM target: layer4 (last residual block)
-```
-
-### EfficientNet-B0 (Fine-tuned)
-```
-ImageNet pretrained EfficientNet-B0
-  └── Feature Extraction (MBConv blocks)  [Frozen / Fine-tuned]
-  └── AdaptiveAvgPool
-  └── Custom Classifier:
-        Dropout(0.4) → Linear(1280→256) → BN → SiLU
-        → Dropout(0.2) → Linear(256→4)
-Grad-CAM target: _blocks[-1] (last MBConv block)
-```
-
-### Ensemble
-```
-P_ensemble = 0.5 × softmax(ResNet50) + 0.5 × softmax(EfficientNet)
+python -m unittest discover tests
 ```
 
 ---
 
-## 🔬 Kỹ thuật sử dụng
+## 🏗️ Kiến trúc & Kỹ thuật
 
-| Kỹ thuật | Mô tả |
-|----------|-------|
-| **Transfer Learning** | Pretrained ImageNet weights |
-| **Label Smoothing** | ε=0.1 chống overfitting |
-| **Weighted Sampler** | Xử lý class imbalance |
-| **Albumentations** | Data augmentation mạnh |
-| **Cosine LR Decay** | CosineAnnealingLR |
-| **AMP** | Mixed precision training (fp16) |
-| **Grad-CAM++** | Visualize vùng AI quan sát |
-| **Early Stopping** | Patience=10 |
-| **Ensemble** | ResNet50 + EfficientNet-B0 |
-
----
-
-## 📊 Kết quả mong đợi
-
-| Mô hình | Val Accuracy | Test Accuracy |
-|---------|-------------|--------------|
-| ResNet50 | ~95–97% | ~94–96% |
-| EfficientNet-B0 | ~95–97% | ~94–97% |
-| **Ensemble** | **~96–98%** | **~96–98%** |
-
-*Kết quả thực tế phụ thuộc vào hyperparameters và hardware.*
+- **Ensemble Learning**: Kết hợp dự đoán từ ResNet50 và EfficientNet-B0 để tăng độ chính xác.
+- **Grad-CAM++**: Giải thích quyết định của AI bằng cách quét và hiển thị vùng nghi vấn trên ảnh MRI.
+- **Centralized Config**: Mọi tham số quan trọng đều được quản lý tại `src/config.py`.
+- **Responsive UI**: Giao diện chế độ tối (Dark mode), hỗ trợ kéo thả ảnh và hiển thị kết quả thời gian thực.
 
 ---
 
 ## ⚠️ Lưu ý quan trọng
 
-> Đây là **công cụ nghiên cứu và học thuật**.
-> **KHÔNG** sử dụng để thay thế chẩn đoán y tế thực tế.
-> Mọi kết quả cần được xác nhận bởi bác sĩ thần kinh chuyên khoa.
+Đây là **công cụ nghiên cứu**. Kết quả chỉ mang tính chất tham khảo và **KHÔNG** thay thế chẩn đoán chuyên môn của bác sĩ.
 
 ---
 
-*Built with PyTorch · Flask · Albumentations · Grad-CAM++*
+_Phát triển bởi NeuroScan Team · Sử dụng PyTorch, Flask & Albumentations_
