@@ -49,8 +49,12 @@ class BrainTumorModel(nn.Module):
             self._build_resnet50(pretrained, dropout, num_classes)
         elif backbone == "efficientnet":
             self._build_efficientnet(pretrained, dropout, num_classes)
+        elif backbone == "convnext_small":
+            self._build_convnext_small(pretrained, dropout, num_classes)
+        elif backbone == "efficientnet_v2_s":
+            self._build_efficientnet_v2_s(pretrained, dropout, num_classes)
         else:
-            raise ValueError(f"Unsupported backbone: {backbone}. Choose 'resnet50' or 'efficientnet'")
+            raise ValueError(f"Unsupported backbone: {backbone}. Choose 'resnet50', 'efficientnet', 'convnext_small' or 'efficientnet_v2_s'")
 
         self._apply_freeze_mode(mode, unfreeze_layers)
 
@@ -121,6 +125,45 @@ class BrainTumorModel(nn.Module):
             )
             self.gradcam_layer = self.feature_extractor[-1]
 
+    # ── ConvNeXt-Small ────────────────────────────────────────────────────────
+    def _build_convnext_small(self, pretrained, dropout, num_classes):
+        weights = tv_models.ConvNeXt_Small_Weights.IMAGENET1K_V1 if pretrained else None
+        base = tv_models.convnext_small(weights=weights)
+
+        self.feature_extractor = base.features
+        self.avgpool = base.avgpool
+
+        in_features = base.classifier[-1].in_features
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(in_features, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.5),
+            nn.Linear(512, num_classes),
+        )
+        # Last feature block for Grad-CAM
+        self.gradcam_layer = self.feature_extractor[-1]
+
+    # ── EfficientNet-V2-S ─────────────────────────────────────────────────────
+    def _build_efficientnet_v2_s(self, pretrained, dropout, num_classes):
+        weights = tv_models.EfficientNet_V2_S_Weights.IMAGENET1K_V1 if pretrained else None
+        base = tv_models.efficientnet_v2_s(weights=weights)
+
+        self.feature_extractor = base.features
+        self.avgpool = base.avgpool
+
+        in_features = base.classifier[-1].in_features
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(in_features, 256),
+            nn.BatchNorm1d(256),
+            nn.SiLU(),
+            nn.Dropout(dropout * 0.5),
+            nn.Linear(256, num_classes),
+        )
+        self.gradcam_layer = self.feature_extractor[-1]
+
     # ── Freeze / Unfreeze ─────────────────────────────────────────────────────
     def _apply_freeze_mode(self, mode: str, unfreeze_layers: int):
         if mode == "feature":
@@ -160,6 +203,10 @@ class BrainTumorModel(nn.Module):
         else:
             x = self.feature_extractor(x)
             x = self.avgpool(x)
+            if self.backbone_name == "convnext_small":
+                # ConvNeXt avgpool output is (B, C, 1, 1), but sometimes slightly different depending on version
+                # Torchvision ConvNeXt's avgpool is AdaptiveAvgPool2d(1)
+                pass 
             x = torch.flatten(x, 1)
 
         return self.classifier(x)
@@ -391,12 +438,25 @@ def build_efficientnet(pretrained=True, mode="finetune") -> BrainTumorModel:
     return BrainTumorModel(backbone="efficientnet", pretrained=pretrained, mode=mode)
 
 
+def build_convnext_small(pretrained=True, mode="finetune") -> BrainTumorModel:
+    return BrainTumorModel(backbone="convnext_small", pretrained=pretrained, mode=mode)
+
+
+def build_efficientnet_v2_s(pretrained=True, mode="finetune") -> BrainTumorModel:
+    return BrainTumorModel(backbone="efficientnet_v2_s", pretrained=pretrained, mode=mode)
+
+
 def get_gradcam(model: BrainTumorModel, variant: str = "gradcam") -> GradCAM:
     """Khởi tạo Grad-CAM cho model."""
     target_layer = model.gradcam_layer
     if model.backbone_name == "resnet50":
         # Target layer cụ thể hơn cho ResNet50 để tăng độ chính xác (last conv của block cuối)
         target_layer = model.feature_extractor[7][-1].conv3
+    elif model.backbone_name == "convnext_small":
+        # ConvNeXt last block: features[7] is the last block group
+        target_layer = model.feature_extractor[7][-1]
+    elif model.backbone_name == "efficientnet_v2_s":
+        target_layer = model.feature_extractor[-1]
 
     if variant == "gradcam++":
         return GradCAMPlusPlus(model, target_layer)

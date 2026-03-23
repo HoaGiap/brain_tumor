@@ -115,7 +115,7 @@ function setLoading(on) {
     <div class="loading-state">
       <div class="spinner"><i class="fa-solid fa-brain"></i></div>
       <p>Đang phân tích MRI...</p>
-      <small>ResNet50 + EfficientNet-B0 + Grad-CAM</small>
+      <small>ResNet50 + EfficientNet + ConvNeXt + EfficientNet-V2</small>
       <div class="dots"><span>●</span><span>●</span><span>●</span></div>
     </div>`;
   } else {
@@ -214,7 +214,13 @@ function renderGradcam() {
   keys.forEach((k, i) => {
     const btn = document.createElement("button");
     btn.className = `gtab ${i === 0 ? "active" : ""}`;
-    btn.textContent = k === "resnet50" ? "ResNet50" : "EfficientNet-B0";
+    const modelLabels = {
+      "resnet50": "ResNet50",
+      "efficientnet": "EfficientNet-B0",
+      "convnext_small": "ConvNeXt-S",
+      "efficientnet_v2_s": "EffNet-V2-S"
+    };
+    btn.textContent = modelLabels[k] || k;
     btn.onclick = () => {
       document.querySelectorAll(".gtab").forEach(b => b.classList.remove("active"));
       btn.classList.add("active");
@@ -230,7 +236,13 @@ function renderModelCompare(perModel) {
   const container = document.getElementById("modelCompare");
   card.style.display = "block";
   container.innerHTML = Object.entries(perModel).map(([name, scores]) => {
-    const displayName = name === "resnet50" ? "ResNet50" : "EfficientNet-B0";
+    const modelLabels = {
+      "resnet50": "ResNet50",
+      "efficientnet": "EfficientNet-B0",
+      "convnext_small": "ConvNeXt-S",
+      "efficientnet_v2_s": "EffNet-V2-S"
+    };
+    const displayName = modelLabels[name] || name;
     const rows = Object.entries(scores)
       .sort((a, b) => b[1] - a[1])
       .map(([cn, pct]) => `

@@ -27,19 +27,9 @@ import torch
 from collections import Counter
 
 
-# ─── Ánh xạ lớp (Class Mapping) ───────────────────────────────────────────────
-CLASS_NAMES = ["glioma", "meningioma", "notumor", "pituitary"]
-CLASS_LABELS = {name: idx for idx, name in enumerate(CLASS_NAMES)}
-CLASS_VI = {
-    "glioma":     "U thần kinh đệm",
-    "meningioma": "U màng não",
-    "notumor":    "Không có u",
-    "pituitary":  "U tuyến yên",
-}
-NUM_CLASSES = len(CLASS_NAMES)
+from src.config import IMG_SIZE, CLASS_NAMES, CLASS_VI, NUM_CLASSES
 
-# ─── Kích thước ảnh (Image Size) ──────────────────────────────────────────────
-IMG_SIZE = 224
+CLASS_LABELS = {name: idx for idx, name in enumerate(CLASS_NAMES)}
 
 
 # ─── Quá trình tăng cường dữ liệu (Augmentation Pipelines) ────────────────────

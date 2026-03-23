@@ -25,15 +25,17 @@ import numpy as np
 from PIL import Image
 import torch
 import torch.nn.functional as F
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 
 sys.path.insert(0, os.path.dirname(__file__))
 from src.models import (
     BrainTumorModel, GradCAM, GradCAMPlusPlus,
-    apply_gradcam_overlay, build_resnet50, build_efficientnet, get_gradcam
+    apply_gradcam_overlay, build_resnet50, build_efficientnet,
+    build_convnext_small, build_efficientnet_v2_s, get_gradcam
 )
-from src.dataset import CLASS_NAMES, CLASS_VI, IMG_SIZE, get_val_transforms
+from src.config import CLASS_NAMES, CLASS_VI, IMG_SIZE, DEVICE, SERVER_CONFIG
+from src.dataset import get_val_transforms
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -42,18 +44,22 @@ app = Flask(__name__)
 CORS(app)
 
 # ─── Global Models ─────────────────────────────────────────────────────────────
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = DEVICE
 models: dict[str, BrainTumorModel] = {}
 gradcam_engines: dict[str, GradCAM] = {}
 
 
-def load_models(resnet_path: str | None, effnet_path: str | None):
+def load_models(resnet_path, effnet_path, convnext_path, effnet_v2_path):
     global models, gradcam_engines
 
-    for name, path, builder in [
-        ("resnet50",     resnet_path, build_resnet50),
-        ("efficientnet", effnet_path, build_efficientnet),
-    ]:
+    configs = [
+        ("resnet50",           resnet_path,     build_resnet50),
+        ("efficientnet",       effnet_path,     build_efficientnet),
+        ("convnext_small",     convnext_path,   build_convnext_small),
+        ("efficientnet_v2_s",  effnet_v2_path,  build_efficientnet_v2_s),
+    ]
+
+    for name, path, builder in configs:
         if path and Path(path).exists():
             logger.info(f"Loading {name} from {path}...")
             m = builder(pretrained=False)
@@ -61,9 +67,9 @@ def load_models(resnet_path: str | None, effnet_path: str | None):
             m.load_state_dict(ckpt["model_state_dict"])
             m.to(device).eval()
             models[name] = m
-            gradcam_engines[name] = get_gradcam(m, variant="gradcam++")
+            gradcam_engines[name] = get_gradcam(m, variant=SERVER_CONFIG["gradcam_variant"])
             logger.info(f"  {name} loaded ✓")
-        else:
+        elif path:
             logger.warning(f"  {name}: checkpoint not found at {path}, skipping.")
 
 
@@ -117,6 +123,11 @@ def generate_gradcam_image(
 
 
 # ─── Routes ────────────────────────────────────────────────────────────────────
+@app.route("/", methods=["GET"])
+def index():
+    return render_template("index.html")
+
+
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({
@@ -155,12 +166,10 @@ def predict():
     for name, m in models.items():
         all_probs[name] = predict_single(m, tensor).tolist()
 
-    # Ensemble (weighted average if both available, else single)
-    if len(all_probs) == 2:
-        ensemble_probs = np.array([
-            0.5 * np.array(all_probs["resnet50"]) +
-            0.5 * np.array(all_probs["efficientnet"])
-        ])[0]
+    # Ensemble (average of all loaded models)
+    if len(all_probs) > 1:
+        avg_probs = np.mean(list(all_probs.values()), axis=0)
+        ensemble_probs = avg_probs
     else:
         ensemble_probs = np.array(list(all_probs.values())[0])
 
@@ -238,19 +247,21 @@ def _get_recommendation(pred_class: str) -> str:
 # ─── CLI ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     p = argparse.ArgumentParser(description="Brain Tumor MRI Classifier API")
-    p.add_argument("--resnet",  default=None, help="Path to ResNet50 checkpoint")
-    p.add_argument("--effnet",  default=None, help="Path to EfficientNet checkpoint")
-    p.add_argument("--port",    type=int, default=5000)
-    p.add_argument("--host",    default="0.0.0.0")
-    p.add_argument("--debug",   action="store_true")
+    p.add_argument("--resnet",   default=None, help="Path to ResNet50 checkpoint")
+    p.add_argument("--effnet",   default=None, help="Path to EfficientNet-B0 checkpoint")
+    p.add_argument("--convnext", default=None, help="Path to ConvNeXt-Small checkpoint")
+    p.add_argument("--effnet_v2", default=None, help="Path to EfficientNet-V2-S checkpoint")
+    p.add_argument("--port",    type=int, default=SERVER_CONFIG["port"])
+    p.add_argument("--host",    default=SERVER_CONFIG["host"])
+    p.add_argument("--debug",   action="store_true", default=SERVER_CONFIG["debug"])
     args = p.parse_args()
 
     logger.info(f"Device: {device}")
-    load_models(args.resnet, args.effnet)
+    load_models(args.resnet, args.effnet, args.convnext, args.effnet_v2)
 
     if not models:
         logger.warning("⚠ No models loaded! API will return 503 for /predict.")
-        logger.warning("  Provide checkpoint paths via --resnet and/or --effnet")
+        logger.warning("  Provide checkpoint paths via --resnet, --effnet, --convnext, and/or --effnet_v2")
 
     logger.info(f"Starting Flask on {args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)

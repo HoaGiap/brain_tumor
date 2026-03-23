@@ -10,6 +10,9 @@ Cách dùng:
 
   # Huấn luyện cả hai
   python train.py --backbone both --data ./data --epochs 50 --batch 32
+
+  python train.py --backbone convnext_small --data ./data 
+python train.py --backbone efficientnet_v2_s --data ./data --epochs 50 --batch 32
 """
 
 import os
@@ -374,7 +377,7 @@ def train_model(backbone: str, args, cfg: dict) -> dict:
 def parse_args():
     p = argparse.ArgumentParser(description="Brain Tumor MRI Classifier Trainer")
     p.add_argument("--backbone", default="both",
-                   choices=["resnet50", "efficientnet", "both"],
+                   choices=["resnet50", "efficientnet", "convnext_small", "efficientnet_v2_s", "both"],
                    help="Model backbone to train")
     p.add_argument("--data",    default="./data",   help="Path to dataset root")
     p.add_argument("--output",  default="./checkpoints", help="Output directory")
