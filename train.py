@@ -37,7 +37,8 @@ from tqdm import tqdm
 # Thêm src/ vào path
 sys.path.insert(0, os.path.dirname(__file__))
 from src.dataset import create_dataloaders, CLASS_NAMES, NUM_CLASSES
-from src.models import BrainTumorModel, build_resnet50, build_efficientnet
+from src.models.base import BrainTumorModel
+from src.models.registry import build_resnet50, build_efficientnet
 
 
 # ─── Config ───────────────────────────────────────────────────────────────────

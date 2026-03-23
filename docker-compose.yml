@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  brain-tumor-api:
+    build: .
+    container_name: brain-tumor-container
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./checkpoints:/app/checkpoints
+      - ./data:/app/data
+      - ./static:/app/static
+      - ./templates:/app/templates
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    # Chạy server với các checkpoint mặc định đã huấn luyện
+    command: >
+      python app.py 
+      --resnet checkpoints/resnet50/20260314_130801/resnet50_best.pth 
+      --effnet checkpoints/efficientnet/20260314_130441/efficientnet_best.pth
+    restart: unless-stopped

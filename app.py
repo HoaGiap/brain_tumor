@@ -1,41 +1,11 @@
-"""
-app.py — Flask API Backend
-Cung cấp endpoint /predict nhận ảnh MRI và trả về:
-  - Phân loại (4 classes)
-  - Confidence scores
-  - Grad-CAM heatmap (base64)
-  - Ensemble ResNet50 + EfficientNet-B0
-
-Cách chạy:
-  python app.py --resnet  checkpoints/resnet50/best.pth \
-                --effnet  checkpoints/efficientnet/best.pth \
-                --port    5000
-"""
-
-import os
-import sys
-import io
-import base64
 import argparse
 import logging
-from pathlib import Path
-
-import cv2
-import numpy as np
 from PIL import Image
-import torch
-import torch.nn.functional as F
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 
-sys.path.insert(0, os.path.dirname(__file__))
-from src.models import (
-    BrainTumorModel, GradCAM, GradCAMPlusPlus,
-    apply_gradcam_overlay, build_resnet50, build_efficientnet,
-    build_convnext_small, build_efficientnet_v2_s, get_gradcam
-)
-from src.config import CLASS_NAMES, CLASS_VI, IMG_SIZE, DEVICE, SERVER_CONFIG
-from src.dataset import get_val_transforms
+from src.inference.engine import InferenceEngine
+from src.config import SERVER_CONFIG, CLASS_NAMES, CLASS_VI
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s | %(levelname)s | %(message)s")
 logger = logging.getLogger(__name__)
@@ -43,109 +13,39 @@ logger = logging.getLogger(__name__)
 app = Flask(__name__)
 CORS(app)
 
-# ─── Global Models ─────────────────────────────────────────────────────────────
-device = DEVICE
-models: dict[str, BrainTumorModel] = {}
-gradcam_engines: dict[str, GradCAM] = {}
+# ─── Global Engine ─────────────────────────────────────────────────────────────
+engine = InferenceEngine()
 
-
-def load_models(resnet_path, effnet_path, convnext_path, effnet_v2_path):
-    global models, gradcam_engines
-
+def load_models_to_engine(args):
+    """Load models based on CLI arguments."""
     configs = [
-        ("resnet50",           resnet_path,     build_resnet50),
-        ("efficientnet",       effnet_path,     build_efficientnet),
-        ("convnext_small",     convnext_path,   build_convnext_small),
-        ("efficientnet_v2_s",  effnet_v2_path,  build_efficientnet_v2_s),
+        ("resnet50",           args.resnet),
+        ("efficientnet",       args.effnet),
+        ("convnext_small",     args.convnext),
+        ("efficientnet_v2_s",  args.effnet_v2),
     ]
-
-    for name, path, builder in configs:
-        if path and Path(path).exists():
-            logger.info(f"Loading {name} from {path}...")
-            m = builder(pretrained=False)
-            ckpt = torch.load(path, map_location=device)
-            m.load_state_dict(ckpt["model_state_dict"])
-            m.to(device).eval()
-            models[name] = m
-            gradcam_engines[name] = get_gradcam(m, variant=SERVER_CONFIG["gradcam_variant"])
-            logger.info(f"  {name} loaded ✓")
-        elif path:
-            logger.warning(f"  {name}: checkpoint not found at {path}, skipping.")
-
-
-# ─── Image Preprocessing ───────────────────────────────────────────────────────
-def preprocess_image(pil_image: Image.Image) -> tuple[torch.Tensor, np.ndarray]:
-    """
-    Returns:
-        tensor: preprocessed tensor (1, 3, H, W)
-        orig_np: original numpy array (H, W, 3) uint8 RGB
-    """
-    img_rgb = np.array(pil_image.convert("RGB"))
-    orig_np = img_rgb.copy()
-
-    transform = get_val_transforms(IMG_SIZE)
-    aug = transform(image=img_rgb)
-    tensor = aug["image"].unsqueeze(0).to(device)  # (1, 3, H, W)
-    return tensor, orig_np
-
-
-# ─── Single Model Prediction ───────────────────────────────────────────────────
-@torch.no_grad()
-def predict_single(
-    model: BrainTumorModel,
-    tensor: torch.Tensor,
-) -> np.ndarray:
-    logits = model(tensor)
-    probs  = F.softmax(logits, dim=1)[0].cpu().detach().numpy()
-    return probs  # (num_classes,)
-
-
-# ─── Grad-CAM Generation ───────────────────────────────────────────────────────
-def generate_gradcam_image(
-    model_name: str,
-    tensor: torch.Tensor,
-    orig_np: np.ndarray,
-    class_idx: int,
-) -> str:
-    """Trả về Grad-CAM overlay ảnh dạng base64 PNG."""
-    engine = gradcam_engines.get(model_name)
-    if engine is None:
-        return ""
-
-    cam, _, _ = engine.generate(tensor.squeeze(0), class_idx=class_idx)
-    overlay = apply_gradcam_overlay(orig_np, cam, img_size=IMG_SIZE)
-
-    # Convert to base64
-    img_pil = Image.fromarray(overlay)
-    buf = io.BytesIO()
-    img_pil.save(buf, format="PNG")
-    return "data:image/png;base64," + base64.b64encode(buf.getvalue()).decode()
-
+    for name, path in configs:
+        if path:
+            if engine.load_model(name, path):
+                logger.info(f"Loaded {name} from {path}")
+            else:
+                logger.warning(f"Failed to load {name} from {path}")
 
 # ─── Routes ────────────────────────────────────────────────────────────────────
 @app.route("/", methods=["GET"])
 def index():
     return render_template("index.html")
 
-
 @app.route("/health", methods=["GET"])
 def health():
     return jsonify({
         "status": "ok",
-        "models_loaded": list(models.keys()),
-        "device": str(device),
+        "models_loaded": list(engine.models.keys()),
+        "device": str(engine.device),
     })
-
 
 @app.route("/predict", methods=["POST"])
 def predict():
-    """
-    POST /predict
-    Body: multipart/form-data với field 'image'
-    Optional query params:
-        - gradcam_model: 'resnet50' | 'efficientnet' | 'both' (default: 'both')
-        - gradcam_variant: 'gradcam' | 'gradcam++' (default: 'gradcam++')
-    """
     if "image" not in request.files:
         return jsonify({"error": "No image provided"}), 400
 
@@ -154,74 +54,32 @@ def predict():
 
     try:
         pil_img = Image.open(file.stream)
-        tensor, orig_np = preprocess_image(pil_img)
+        result = engine.predict(pil_img, gradcam_request=gradcam_model_req)
+        
+        # Add severity and recommendation (business logic)
+        pred_class = result["prediction" if "prediction" in result else "class"]
+        confidence = result["confidence"]
+        
+        response = {
+            "prediction": {
+                "class": pred_class,
+                "class_vi": result["class_vi"],
+                "confidence": confidence,
+                "has_tumor": pred_class != "notumor",
+            },
+            "probabilities": {
+                name: {"score_pct": score, "label_vi": CLASS_VI[name]}
+                for name, score in result["probabilities"].items()
+            },
+            "per_model": result["per_model"],
+            "gradcam": result["gradcam"],
+            "severity": _get_severity(pred_class, confidence / 100.0),
+            "recommendation": _get_recommendation(pred_class),
+        }
+        return jsonify(response)
     except Exception as e:
-        return jsonify({"error": f"Image processing error: {str(e)}"}), 400
-
-    if not models:
-        return jsonify({"error": "No models loaded. Please provide checkpoint paths."}), 503
-
-    # ── Predictions ──────────────────────────────────────────────────────────
-    all_probs = {}
-    for name, m in models.items():
-        all_probs[name] = predict_single(m, tensor).tolist()
-
-    # Ensemble (average of all loaded models)
-    if len(all_probs) > 1:
-        avg_probs = np.mean(list(all_probs.values()), axis=0)
-        ensemble_probs = avg_probs
-    else:
-        ensemble_probs = np.array(list(all_probs.values())[0])
-
-    pred_class_idx = int(np.argmax(ensemble_probs))
-    pred_class     = CLASS_NAMES[pred_class_idx]
-    confidence     = float(ensemble_probs[pred_class_idx])
-    has_tumor      = pred_class != "notumor"
-
-    # ── Grad-CAM ─────────────────────────────────────────────────────────────
-    gradcam_images = {}
-    models_for_cam = (
-        list(models.keys())
-        if gradcam_model_req == "both"
-        else [gradcam_model_req]
-        if gradcam_model_req in models
-        else list(models.keys())[:1]
-    )
-
-    for name in models_for_cam:
-        if name in models:
-            gradcam_images[name] = generate_gradcam_image(
-                name, tensor, orig_np, pred_class_idx
-            )
-
-    # ── Response ─────────────────────────────────────────────────────────────
-    response = {
-        "prediction": {
-            "class":      pred_class,
-            "class_vi":   CLASS_VI.get(pred_class, pred_class),
-            "confidence": round(confidence * 100, 2),
-            "has_tumor":  has_tumor,
-        },
-        "probabilities": {
-            CLASS_NAMES[i]: {
-                "score_pct": round(float(ensemble_probs[i]) * 100, 2),
-                "label_vi":  CLASS_VI[CLASS_NAMES[i]],
-            }
-            for i in range(len(CLASS_NAMES))
-        },
-        "per_model": {
-            name: {
-                CLASS_NAMES[i]: round(float(probs[i]) * 100, 2)
-                for i in range(len(CLASS_NAMES))
-            }
-            for name, probs in all_probs.items()
-        },
-        "gradcam": gradcam_images,
-        "severity": _get_severity(pred_class, confidence),
-        "recommendation": _get_recommendation(pred_class),
-    }
-    return jsonify(response)
-
+        logger.error(f"Prediction error: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 def _get_severity(pred_class: str, confidence: float) -> dict:
     severity_map = {
@@ -233,7 +91,6 @@ def _get_severity(pred_class: str, confidence: float) -> dict:
     level, label = severity_map.get(pred_class, ("unknown", "Không xác định"))
     return {"level": level, "label": label, "confidence_pct": round(confidence * 100, 2)}
 
-
 def _get_recommendation(pred_class: str) -> str:
     recs = {
         "notumor":    "Không phát hiện bất thường. Tiếp tục theo dõi định kỳ theo lịch hẹn.",
@@ -243,25 +100,21 @@ def _get_recommendation(pred_class: str) -> str:
     }
     return recs.get(pred_class, "Vui lòng tham vấn bác sĩ chuyên khoa.")
 
-
 # ─── CLI ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    p = argparse.ArgumentParser(description="Brain Tumor MRI Classifier API")
-    p.add_argument("--resnet",   default=None, help="Path to ResNet50 checkpoint")
-    p.add_argument("--effnet",   default=None, help="Path to EfficientNet-B0 checkpoint")
-    p.add_argument("--convnext", default=None, help="Path to ConvNeXt-Small checkpoint")
-    p.add_argument("--effnet_v2", default=None, help="Path to EfficientNet-V2-S checkpoint")
+    p = argparse.ArgumentParser(description="Brain Tumor MRI Classifier API (Refactored)")
+    p.add_argument("--resnet",   default=None)
+    p.add_argument("--effnet",   default=None)
+    p.add_argument("--convnext", default=None)
+    p.add_argument("--effnet_v2", default=None)
     p.add_argument("--port",    type=int, default=SERVER_CONFIG["port"])
     p.add_argument("--host",    default=SERVER_CONFIG["host"])
     p.add_argument("--debug",   action="store_true", default=SERVER_CONFIG["debug"])
     args = p.parse_args()
 
-    logger.info(f"Device: {device}")
-    load_models(args.resnet, args.effnet, args.convnext, args.effnet_v2)
-
-    if not models:
-        logger.warning("⚠ No models loaded! API will return 503 for /predict.")
-        logger.warning("  Provide checkpoint paths via --resnet, --effnet, --convnext, and/or --effnet_v2")
+    load_models_to_engine(args)
+    if not engine.models:
+        logger.warning("⚠ No models loaded! API will return 500/error for /predict.")
 
     logger.info(f"Starting Flask on {args.host}:{args.port}")
     app.run(host=args.host, port=args.port, debug=args.debug)

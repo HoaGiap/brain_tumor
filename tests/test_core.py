@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.config import IMG_SIZE, NUM_CLASSES
 from src.dataset import BrainTumorDataset, get_train_transforms, get_val_transforms
-from src.models import build_resnet50, build_efficientnet
+from src.models.registry import build_resnet50, build_efficientnet
 
 class TestBrainTumorProject(unittest.TestCase):
     
