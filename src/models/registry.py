@@ -13,6 +13,12 @@ def build_convnext_small(pretrained=True, mode="finetune") -> BrainTumorModel:
 def build_efficientnet_v2_s(pretrained=True, mode="finetune") -> BrainTumorModel:
     return BrainTumorModel(backbone="efficientnet_v2_s", pretrained=pretrained, mode=mode)
 
+def build_swin_t(pretrained=True, mode="finetune") -> BrainTumorModel:
+    return BrainTumorModel(backbone="swin_t", pretrained=pretrained, mode=mode)
+
+def build_swin_b(pretrained=True, mode="finetune") -> BrainTumorModel:
+    return BrainTumorModel(backbone="swin_b", pretrained=pretrained, mode=mode)
+
 def get_gradcam(model: BrainTumorModel, variant: str = "gradcam") -> GradCAM:
     target_layer = model.gradcam_layer
     if model.backbone_name == "resnet50":
@@ -21,6 +27,8 @@ def get_gradcam(model: BrainTumorModel, variant: str = "gradcam") -> GradCAM:
         target_layer = model.feature_extractor[7][-1]
     elif model.backbone_name == "efficientnet_v2_s":
         target_layer = model.feature_extractor[-1]
+    elif model.backbone_name in ["swin_t", "swin_b"]:
+        target_layer = model.feature_extractor[-1][-1]
 
     if variant == "gradcam++":
         return GradCAMPlusPlus(model, target_layer)

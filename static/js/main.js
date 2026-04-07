@@ -1,5 +1,5 @@
 // ─── Config ─────────────────────────────────────────────────────────────────
-const API_BASE = "http://localhost:5000";  // Đổi URL nếu deploy server khác
+const API_BASE = "http://localhost:5000"; // Đổi URL nếu deploy server khác
 
 const CLASS_COLORS = {
   glioma: "#ff6b6b",
@@ -28,17 +28,20 @@ const errorBox = document.getElementById("errorBox");
 const imgBadge = document.getElementById("imgBadge");
 
 if (dropZone) {
-    ["dragover", "dragenter"].forEach(e => dropZone.addEventListener(e, ev => {
-      ev.preventDefault(); dropZone.classList.add("drag-over");
-    }));
-    ["dragleave", "drop"].forEach(e => dropZone.addEventListener(e, () =>
-      dropZone.classList.remove("drag-over")
-    ));
-    dropZone.addEventListener("drop", ev => {
+  ["dragover", "dragenter"].forEach((e) =>
+    dropZone.addEventListener(e, (ev) => {
       ev.preventDefault();
-      const f = ev.dataTransfer.files[0];
-      if (f) handleFile(f);
-    });
+      dropZone.classList.add("drag-over");
+    }),
+  );
+  ["dragleave", "drop"].forEach((e) =>
+    dropZone.addEventListener(e, () => dropZone.classList.remove("drag-over")),
+  );
+  dropZone.addEventListener("drop", (ev) => {
+    ev.preventDefault();
+    const f = ev.dataTransfer.files[0];
+    if (f) handleFile(f);
+  });
 }
 
 function handleFile(file) {
@@ -75,8 +78,10 @@ function resetResults() {
     <span><i class="fa-solid fa-chart-column"></i></span>
     <p>Tải ảnh MRI và nhấn<br/><strong style="color:var(--accent)">Phân tích MRI</strong><br/>để xem kết quả</p>
   </div>`;
-  document.getElementById("gradcamCard").style.display = "none";
-  document.getElementById("modelCompareCard").style.display = "none";
+  const gradcamCard = document.getElementById("gradcamCard");
+  if (gradcamCard) gradcamCard.style.display = "none";
+  const modelCompareCard = document.getElementById("modelCompareCard");
+  if (modelCompareCard) modelCompareCard.style.display = "none";
   imgBadge.style.display = "none";
   scanOverlay.classList.remove("active");
 }
@@ -101,7 +106,9 @@ async function analyze() {
     const data = await resp.json();
     renderResults(data);
   } catch (e) {
-    showError(`Lỗi kết nối API: ${e.message}. Đảm bảo server Flask đang chạy tại ${API_BASE}`);
+    showError(
+      `Lỗi kết nối API: ${e.message}. Đảm bảo server Flask đang chạy tại ${API_BASE}`,
+    );
     setLoading(false);
   }
 }
@@ -115,7 +122,7 @@ function setLoading(on) {
     <div class="loading-state">
       <div class="spinner"><i class="fa-solid fa-brain"></i></div>
       <p>Đang phân tích MRI...</p>
-      <small>ResNet50 + EfficientNet + ConvNeXt + EfficientNet-V2</small>
+      <small>EfficientNet-V2-S</small>
       <div class="dots"><span>●</span><span>●</span><span>●</span></div>
     </div>`;
   } else {
@@ -135,7 +142,9 @@ function renderResults(data) {
   // Badge trên ảnh
   imgBadge.style.display = "block";
   imgBadge.className = `img-badge ${p.has_tumor ? "positive" : "negative"}`;
-  imgBadge.textContent = p.has_tumor ? "⚠ PHÁT HIỆN BẤT THƯỜNG" : "✓ BÌNH THƯỜNG";
+  imgBadge.textContent = p.has_tumor
+    ? "⚠ PHÁT HIỆN BẤT THƯỜNG"
+    : "✓ BÌNH THƯỜNG";
 
   // ── Diagnosis block
   let html = `
@@ -157,8 +166,9 @@ function renderResults(data) {
   html += `
   <div class="conf-section">
     <div class="conf-title">ĐỘ TIN CẬY PHÂN LOẠI · ENSEMBLE</div>`;
-  const sorted = Object.entries(data.probabilities)
-    .sort((a, b) => b[1].score_pct - a[1].score_pct);
+  const sorted = Object.entries(data.probabilities).sort(
+    (a, b) => b[1].score_pct - a[1].score_pct,
+  );
   for (const [cn, info] of sorted) {
     const c = CLASS_COLORS[cn] || "#cdd6f4";
     html += `
@@ -202,7 +212,9 @@ function renderResults(data) {
 }
 
 function renderGradcam() {
-  const keys = Object.keys(currentGradcamData).filter(k => currentGradcamData[k]);
+  const keys = Object.keys(currentGradcamData).filter(
+    (k) => currentGradcamData[k],
+  );
   if (!keys.length) return;
 
   const card = document.getElementById("gradcamCard");
@@ -215,14 +227,18 @@ function renderGradcam() {
     const btn = document.createElement("button");
     btn.className = `gtab ${i === 0 ? "active" : ""}`;
     const modelLabels = {
-      "resnet50": "ResNet50",
-      "efficientnet": "EfficientNet-B0",
-      "convnext_small": "ConvNeXt-S",
-      "efficientnet_v2_s": "EffNet-V2-S"
+      resnet50: "ResNet50",
+      efficientnet: "EfficientNet-B0",
+      convnext_small: "ConvNeXt-Small",
+      efficientnet_v2_s: "EfficientNet-V2-S",
+      swin_t: "Swin-Transformer-T",
+      swin_b: "Swin-Transformer-Base",
     };
     btn.textContent = modelLabels[k] || k;
     btn.onclick = () => {
-      document.querySelectorAll(".gtab").forEach(b => b.classList.remove("active"));
+      document
+        .querySelectorAll(".gtab")
+        .forEach((b) => b.classList.remove("active"));
       btn.classList.add("active");
       img.src = currentGradcamData[k];
     };
@@ -235,27 +251,34 @@ function renderModelCompare(perModel) {
   const card = document.getElementById("modelCompareCard");
   const container = document.getElementById("modelCompare");
   card.style.display = "block";
-  container.innerHTML = Object.entries(perModel).map(([name, scores]) => {
-    const modelLabels = {
-      "resnet50": "ResNet50",
-      "efficientnet": "EfficientNet-B0",
-      "convnext_small": "ConvNeXt-S",
-      "efficientnet_v2_s": "EffNet-V2-S"
-    };
-    const displayName = modelLabels[name] || name;
-    const rows = Object.entries(scores)
-      .sort((a, b) => b[1] - a[1])
-      .map(([cn, pct]) => `
+  container.innerHTML = Object.entries(perModel)
+    .map(([name, scores]) => {
+      const modelLabels = {
+        resnet50: "ResNet50",
+        efficientnet: "EfficientNet-B0",
+        convnext_small: "ConvNeXt-Small",
+        efficientnet_v2_s: "EfficientNet-V2-S",
+        swin_t: "Swin-Transformer-T",
+        swin_b: "Swin-Transformer-Base",
+      };
+      const displayName = modelLabels[name] || name;
+      const rows = Object.entries(scores)
+        .sort((a, b) => b[1] - a[1])
+        .map(
+          ([cn, pct]) => `
       <div class="model-row">
         <span>${CLASS_VI[cn]}</span>
         <strong style="color:${CLASS_COLORS[cn]}">${pct}%</strong>
-      </div>`).join("");
-    return `
+      </div>`,
+        )
+        .join("");
+      return `
     <div class="model-card">
       <div class="model-name">${displayName.toUpperCase()}</div>
       ${rows}
     </div>`;
-  }).join("");
+    })
+    .join("");
 }
 
 // ─── Error handling ──────────────────────────────────────────────────────────

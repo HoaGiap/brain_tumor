@@ -36,10 +36,20 @@ class BrainTumorModel(nn.Module):
             self._build_convnext_small(pretrained, dropout, num_classes)
         elif backbone == "efficientnet_v2_s":
             self._build_efficientnet_v2_s(pretrained, dropout, num_classes)
+        elif backbone == "swin_t":
+            self._build_swin_t(pretrained, dropout, num_classes)
+        elif backbone == "swin_b":
+            self._build_swin_b(pretrained, dropout, num_classes)
         else:
             raise ValueError(f"Unsupported backbone: {backbone}")
 
         self._apply_freeze_mode(mode, unfreeze_layers)
+
+    def get_total_params(self):
+        return sum(p.numel() for p in self.parameters())
+
+    def get_trainable_params(self):
+        return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
     def _build_resnet50(self, pretrained, dropout, num_classes):
         weights = tv_models.ResNet50_Weights.IMAGENET1K_V2 if pretrained else None
@@ -124,6 +134,39 @@ class BrainTumorModel(nn.Module):
         )
         self.gradcam_layer = self.feature_extractor[-1]
 
+    def _build_swin_t(self, pretrained, dropout, num_classes):
+        weights = tv_models.Swin_T_Weights.IMAGENET1K_V1 if pretrained else None
+        base = tv_models.swin_t(weights=weights)
+        self.feature_extractor = base.features
+        self.avgpool = base.avgpool
+        in_features = base.head.in_features
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(in_features, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.5),
+            nn.Linear(512, num_classes),
+        )
+        # Swin-T gradcam: target the last normative layer
+        self.gradcam_layer = self.feature_extractor[-1][-1]
+
+    def _build_swin_b(self, pretrained, dropout, num_classes):
+        weights = tv_models.Swin_B_Weights.IMAGENET1K_V1 if pretrained else None
+        base = tv_models.swin_b(weights=weights)
+        self.feature_extractor = base.features
+        self.avgpool = base.avgpool
+        in_features = base.head.in_features
+        self.classifier = nn.Sequential(
+            nn.Dropout(dropout),
+            nn.Linear(in_features, 512),
+            nn.BatchNorm1d(512),
+            nn.GELU(),
+            nn.Dropout(dropout * 0.5),
+            nn.Linear(512, num_classes),
+        )
+        self.gradcam_layer = self.feature_extractor[-1][-1]
+
     def _apply_freeze_mode(self, mode: str, unfreeze_layers: int):
         if mode == "feature":
             for p in self.feature_extractor.parameters(): p.requires_grad = False
@@ -140,6 +183,11 @@ class BrainTumorModel(nn.Module):
             x = self.feature_extractor._avg_pooling(x)
             x = x.flatten(start_dim=1)
             x = self.feature_extractor._dropout(x)
+        elif self.backbone_name in ["swin_t", "swin_b"]:
+            x = self.feature_extractor(x)
+            x = x.permute(0, 3, 1, 2)  # Swin output is (B, H, W, C), need (B, C, H, W)
+            x = self.avgpool(x)
+            x = torch.flatten(x, 1)
         else:
             x = self.feature_extractor(x)
             x = self.avgpool(x)

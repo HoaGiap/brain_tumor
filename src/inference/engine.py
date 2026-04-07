@@ -29,9 +29,9 @@ class InferenceEngine:
             return False
         
         builders = {
-            "resnet50": build_resnet50,
-            "efficientnet": build_efficientnet,
-            "convnext_small": build_convnext_small,
+            # "resnet50": build_resnet50,
+            # "efficientnet": build_efficientnet,
+            # "convnext_small": build_convnext_small,
             "efficientnet_v2_s": build_efficientnet_v2_s,
         }
         

@@ -18,7 +18,7 @@
           <div class="logo-icon"><i class="fa-solid fa-brain"></i></div>
           <div>
             <h1>NeuroScan <span>AI</span></h1>
-            <p>HỆ THỐNG PHÂN LOẠI KHỐI U NÃO · RESNET50 + EFF-B0 + CONVNEXT + EFF-V2 · GRAD-CAM</p>
+            <p>HỆ THỐNG PHÂN LOẠI KHỐI U NÃO · EFFICIENTNET-V2-S· GRAD-CAM++</p>
           </div>
         </div>
         <div class="status-pill">
@@ -26,11 +26,11 @@
           Med-AI
         </div>
       </div>
-      <!-- <div class="warning">
+      <div class="warning">
         <span>⚠</span>
         <span>Công cụ <strong>hỗ trợ nghiên cứu</strong> — KHÔNG thay thế chẩn đoán y tế chuyên nghiệp.
           Mọi kết quả cần được xác nhận bởi bác sĩ chuyên khoa.</span>
-      </div> -->
+      </div>
     </div>
   </header>
 
@@ -42,14 +42,14 @@
         <div>
           <div class="card">
             <div class="card-header">
-              <span>🩻</span>
+              <span><i class="fa-regular fa-image"></i></span>
               <span class="card-title">Ảnh MRI đầu vào</span>
             </div>
             <div class="card-body">
 
               <!-- Drop zone -->
               <div class="drop-zone" id="dropZone" onclick="document.getElementById('fileInput').click()">
-                <div class="icon">🩻</div>
+                <div class="icon"><i class="fa-regular fa-image"></i></div>
                 <p>Kéo thả hoặc click để chọn ảnh MRI</p>
                 <small>JPG · PNG · BMP · TIFF</small>
               </div>
@@ -118,7 +118,7 @@
           </div>
 
           <!-- Per-model comparison -->
-          <div class="card" id="modelCompareCard" style="display:none; margin-top:16px;">
+          <!-- <div class="card" id="modelCompareCard" style="display:none; margin-top:16px;">
             <div class="card-header">
               <span><i class="fa-solid fa-scale-balanced"></i></span>
               <span class="card-title">So sánh từng mô hình</span>
@@ -126,7 +126,7 @@
             <div class="card-body">
               <div class="model-compare" id="modelCompare"></div>
             </div>
-          </div>
+          </div> -->
         </div>
 
       </div>
@@ -135,7 +135,7 @@
 
   <footer>
     <div class="container">
-      NEUROSCAN AI · ResNet50 + Eff-B0 + ConvNeXt-S + Eff-V2-S + Grad-CAM++ · PyTorch ·
+      NEUROSCAN AI · EFFICIENTNET-V2-S + Grad-CAM++ · PyTorch ·
       Dữ liệu: Kaggle Brain Tumor MRI Dataset
     </div>
   </footer>

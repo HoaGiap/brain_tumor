@@ -19,10 +19,12 @@ engine = InferenceEngine()
 def load_models_to_engine(args):
     """Load models based on CLI arguments."""
     configs = [
-        ("resnet50",           args.resnet),
-        ("efficientnet",       args.effnet),
-        ("convnext_small",     args.convnext),
+        # ("resnet50",           args.resnet),
+        # ("efficientnet",       args.effnet),
+        # ("convnext_small",     args.convnext),
         ("efficientnet_v2_s",  args.effnet_v2),
+        # ("swin_t",             args.swin_t),
+        # ("swin_b",             args.swin_b),
     ]
     for name, path in configs:
         if path:
@@ -107,6 +109,8 @@ if __name__ == "__main__":
     p.add_argument("--effnet",   default=None)
     p.add_argument("--convnext", default=None)
     p.add_argument("--effnet_v2", default=None)
+    p.add_argument("--swin_t",    default=None)
+    p.add_argument("--swin_b",    default=None)
     p.add_argument("--port",    type=int, default=SERVER_CONFIG["port"])
     p.add_argument("--host",    default=SERVER_CONFIG["host"])
     p.add_argument("--debug",   action="store_true", default=SERVER_CONFIG["debug"])

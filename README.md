@@ -1,107 +1,280 @@
 # 🧠 NeuroScan AI — Brain Tumor MRI Classifier
 
-[![Python 3.8+](https://img.shields.io/badge/python-3.8+-blue.svg)](https://www.python.org/downloads/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)](https://pytorch.org/)
-[![Flask](https://img.shields.io/badge/Flask-000000?logo=flask&logoColor=white)](https://flask.palletsprojects.com/)
+---
 
-**NeuroScan AI** là hệ thống hỗ trợ chẩn đoán khối u não từ ảnh MRI thông qua trí tuệ nhân tạo. Ứng dụng kết hợp sức mạnh của 4 kiến trúc mạng nơ-ron tích chập (CNN) tiên tiến để đưa ra kết quả phân loại ensemble chính xác cao cùng với công nghệ **Grad-CAM++** để trực quan hóa vùng quan tâm.
+> Ứng dụng hỗ trợ y tế chuyên sâu sử dụng công nghệ Deep Learning (CNN & Transformer) để nhận diện và phân loại khối u não từ ảnh MRI tĩnh với độ chính xác cao, tích hợp Explainable AI (XAI) nhằm tăng tính minh bạch trong chẩn đoán lâm sàng.
+
+![Python](https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
+![Flask](https://img.shields.io/badge/Flask-000000?style=for-the-badge&logo=flask&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JavaScript-F7DF1E?style=for-the-badge&logo=javascript&logoColor=black)
 
 ---
 
-## ✨ Tính năng nổi bật
+## 📑 Table of Contents
 
-- **⚡ Quad-Model Ensemble**: Kết hợp dự đoán từ 4 mô hình: **ResNet50**, **EfficientNet-B0**, **ConvNeXt-Small**, và **EfficientNet-V2-S**.
-- **🔍 Giải thích AI (XAI)**: Sử dụng **Grad-CAM++** để hiển thị heatmap, giúp bác sĩ biết AI đang tập trung vào vùng nào trên ảnh MRI.
-- **🎨 Giao diện Hiện đại**: Web-app trực quan, hỗ trợ kéo thả ảnh, hiệu ứng quét (scanning) và biểu đồ so sánh mô hình theo thời gian thực.
-- **🚀 Hiệu suất tối ưu**: Hỗ trợ tăng tốc phần cứng (CUDA/GPU) và xử lý ảnh chuyên sâu với Albumentations.
+- [📖 Giới Thiệu Đồ Án](#-giới-thiệu-đồ-án)
+- [🌟 Tính Năng Chính](#-tính-năng-chính)
+- [🏗️ Kiến Trúc Hệ Thống](#️-kiến-trúc-hệ-thống)
+- [🚀 Hướng Dẫn Cài Đặt](#-hướng-dẫn-cài-đặt-chi-tiết)
+- [🐳 Triển Khai với Docker](#-triển-khai-với-docker)
+- [📝 Scripts và Commands](#-scripts-và-commands)
+- [📚 Tài Liệu API](#-tài-liệu-api)
+- [🧪 Testing và Quality](#-testing-và-quality-assurance)
+- [🛠️ Công Nghệ Sử Dụng](#️-công-nghệ-sử-dụng)
+- [📞 Liên Hệ](#-liên-hệ)
 
 ---
 
-## 📁 Cấu trúc thư mục
+## 📖 Giới Thiệu Đồ Án
 
-```text
+Đây là đồ án nghiên cứu ứng dụng AI vào y tế. Dự án phát triển hệ thống hỗ trợ chẩn đoán khối u não thông qua phân tích ảnh MRI sử dụng các công nghệ Computer Vision tiên tiến và cung cấp kết quả chẩn đoán tự động trên nền tảng web trực quan.
+
+### 👥 Thông Tin Sinh Viên
+
+- **Sinh viên thực hiện**: Hoa Giap - Quoc Dat
+- **Lĩnh vực đề tài**: Medical AI / Deep Learning
+
+### 🎯 Mục Tiêu Đồ Án
+
+- Xây dựng hệ thống phân loại 4 nhãn ảnh MRI khối u ở não (Bình thường, U màng não, U tuyến yên, U thần kinh đệm).
+- Áp dụng kiến trúc mạng Neural Network hiện đại: Đơn giản hoá kiến trúc trên môi trường bằng EfficientNet-V2-S (với khả năng hỗ trợ mở rộng thêm ResNet, Swin Transformer).
+- Tích hợp XAI (Explainable AI) bằng thuật toán Grad-CAM++ để giải thích kết quả dự đoán của AI cho bác sĩ, giúp minh bạch hoá hành vi ra quyết định.
+- Xây dựng Web Interface trực quan với framework Flask API mạnh mẽ để hỗ trợ tải ảnh và xuất báo cáo.
+
+---
+
+## 🌟 Tính Năng Chính
+
+### 🩺 Chẩn Đoán Khối U
+
+- **Kiến Trúc Mô Hình Hiện Đại**: Sử dụng mô hình EfficientNet-V2-S mạnh mẽ để tối ưu tốc độ và độ chuẩn xác trong nhận diện MRI.
+- **Phân Loại Định Phân Tự Động**: Nhận định và cảnh báo một trong 4 loại khối u (Bình thường, U màng não, U tuyến yên, U thần kinh đệm).
+- **Mức Độ Nguy Hiểm & Khuyến Nghị**: Cung cấp đánh giá mức độ nghiêm trọng và đưa ra các khuyến nghị, lời khuyên y tế ban đầu nhanh chóng.
+
+### 🤖 Tính Năng XAI (Explainable AI Thông Minh)
+
+Hệ thống cung cấp tính minh bạch (XAI) nhằm tăng độ tin cậy để bác sĩ có thể đánh giá và chẩn đoán:
+
+- **Tạo Heatmap Trực Quan**: Áp dụng thuật toán Grad-CAM++ để highlight những vùng pixels / cấu trúc não bộ ảnh hưởng trức tiếp đến quyết định của model.
+- **So Sánh Chéo Modals/Kiến trúc**: Tính năng hỗ trợ chạy đa mô hình giúp bác sĩ có cái nhìn tương phản logic (nếu cung cấp nhiều checkpoint weight).
+
+### 🎨 Trải Nghiệm Người Dùng (Giao Diện Web)
+
+- **Cơ chế Kéo Thả (Drag & Drop)**: Trải nghiệm tương tác form upload file y tế mượt mà, tiện lợi.
+- **Biểu Đồ So Sánh Trực Quan**: Phân tích hiển thị Progress Bar đánh giá probability (xác suất) rủi ro trên mọi bệnh án.
+- **Animation Quét Lớp**: Bổ sung hiệu ứng scanning chạy dọc ảnh trong lúc mô hình tính toán giúp nhận diện trực quan.
+- **Tốc Độ Phản Hồi Dữ Liệu**: Giao diện cập nhật logic API Response ngay tại chỗ kết hợp với xử lý Fetch không cần phải Reload trang.
+
+---
+
+## 🏗️ Kiến Trúc Hệ Thống
+
+### 📋 Tổng Quan Kiến Trúc
+
+Hệ thống sử dụng **kiến trúc Client-Server** nguyên khối tích hợp chạy Load Models Machine Learning Local, bao gồm:
+
+- **Frontend Application**: Vanilla JS (ES6+), thao tác DOM trực tiếp, quản lí call API ẩn AJAX hiện đại để tối ưu băng thông.
+- **Backend API**: Python - Flask framework xử lý các Endpoint RESTFul, validate đầu vào.
+- **Inference Engine AI**: Module PyTorch quản lý vòng đời (load in-memory, forward pass prediction, tensor preprocessing) của các deep learning weights.
+
+### 🎯 Sơ Đồ Kiến Trúc (Text Block)
+
+```
+  [Người Dùng Bác Sĩ]
+       |
+       |  (Tải Upload Ảnh MRI Định Dạng Chuẩn)
+       v
+  [Frontend (HTML/CSS DOM)]
+       |
+       |  (Tạo POST Request Multipart Form File)
+       v
+  [Backend (Flask Server Engine)]
+       |
+       |  (Tiền xử lý ảnh: Normalize Tensor, Augment Test)
+       v
+  [PyTorch AI Engine Layer]
+       |
+       |--(Kiến tạo Inference Predict vs EfficientNet)
+       |--(Kích hoạt xử lý Hook Activation Map tạo Grad-CAM++ Heatmap Image Base64)
+       |
+       <--(Đóng khung Result Payload: Tên U, % Probabilities, Data URI Base64)--|
+  [Backend Cấu trúc Response & Trả Client Render HTML]
+```
+
+### ⚙️ Cấu Trúc Backend & Engine Architecture
+
+```
 brain_tumor/
 ├── src/
-│   ├── config.py         # ⚙️ Cấu hình tập trung (IMG_SIZE, CLASS, Port...)
-│   ├── dataset.py        # Xử lý dữ liệu & Augmentation
-│   ├── models.py         # Định nghĩa 4 kiến trúc CNN & Grad-CAM++
-│   └── trainer.py        # Logic huấn luyện mô hình
-├── static/               # 🎨 CSS & JS (Frontend)
-├── templates/            # 🖼️ Giao diện HTML (Jinja2)
-├── checkpoints/          # ⚖️ Lưu trữ trọng số mô hình (.pth)
-├── tests/                # 🧪 Kiểm thử tự động
-├── app.py                # Flask API & Web Server
-├── train.py              # Script chạy huấn luyện
-└── requirements.txt      # Danh sách thư viện
+│   ├── config.py         # ⚙️ Cấu hình hệ thống (IMG_SIZE, PORT...)
+│   ├── dataset.py        # 🗃️ Đọc files MRI, Transforms & Augmentation parameters
+│   ├── models/           # 🧠 Định nghĩa cấu trúc Neural Networks & Grad-CAM++
+│   ├── inference/        # 🎮 Engine Pipeline logic đưa Tensor ảnh predict và pipeline Ensemble
+│   └── utils/            # 🔧 Utilities phụ trợ (Metrics tracking logs)
+├── static/               # 🎨 Tài nguyên tính cho Native Frontend Web (CSS Styles, JS Scripts)
+├── templates/            # 🖼️ Templates Layout base của Jinja2 cho UI Web
+├── checkpoints/          # ⚖️ Lưu trữ các phiên bản checkpoint trained weights (.pth) đã ra lò
+├── tests/                # 🧪 Bài Unit Testing tự động đánh giá CI codebase
+├── app.py                # 🚀 File Máy Chủ Entrypoint (Bắt đầu Flask System Server)
+├── train.py              # 📈 File Script để Pipeline Data và Train cấu trúc Model Deep Learning
+├── Dockerfile            # 🐳 Container Image Creation blueprint
+├── docker-compose.yml    # 📦 Orchestration Setup Multi-architecture Services
+└── requirements.txt      # 📦 Thông tin thư viện library dependencies của Python Runtime
 ```
 
 ---
 
-## 🛠️ Cài đặt & Khởi chạy
+## 🚀 Hướng Dẫn Cài Đặt Chi Tiết
 
-### 1. Chuẩn bị môi trường
+### 📋 Yêu Cầu Hệ Thống Căn Bản
 
-Yêu cầu Python 3.8 trở lên. Khuyến khích sử dụng môi trường ảo (venv):
+- **Python Runtime** (Khuyến khích phiên bản >= 3.8).
+- **Phần Cứng Đồ Hoạ**: Cực kì khuyến nghị có NVIDIA GPU kết hợp **CUDA Toolkit** để quá trình Prediction/Inference hoặc Restrain nhanh hơn gấp nhiều lần.
+- Môi trường Git Command Line để tương tác hệ thống lấy dự án.
+
+### 🛠️ Quy Trình Cài Đặt Setup Nội Bộ
+
+#### 1. Lấy Source Dự Án Về Máy
 
 ```bash
-# Cài đặt thư viện
+git clone https://github.com/HoaGiap/brain_tumor.git
+cd brain_tumor
+```
+
+#### 2. Cài Đặt Thư Viện Python Phụ Thuộc (Dependencies)
+
+_Khuyến nghị thiết lập cách ly (Virtual Environment) để tránh đụng độ rác ở không gian Python gốc: _
+
+```bash
+# Thiết lập không gian ảo (bằng công cụ venv tích hợp)
+python -m venv venv
+
+# Active Environment (Với nền tảng Windows PowerShell)
+.\venv\Scripts\activate
+# Đối với người dùng nền tảng Linux / MacOS
+source venv/bin/activate
+
+# Tải Thư Viện về dự án
 pip install -r requirements.txt
 ```
 
-### 2. Khởi động Web Server (Ensemble 4 mô hình)
+#### 3. Chạy System Framework Server API Chế Độ Dev
 
-Sử dụng lệnh sau để chạy server với đầy đủ các checkpoints (điều chỉnh đường dẫn phù hợp):
-
-```powershell
-python app.py `
-  --resnet checkpoints/resnet50/20260314_130801/resnet50_best.pth `
-  --effnet checkpoints/efficientnet/20260314_130441/efficientnet_best.pth `
-  --convnext checkpoints/convnext_small/20260320_081724/convnext_small_best.pth `
-  --effnet_v2 checkpoints/efficientnet_v2_s/20260320_091400/efficientnet_v2_s_best.pth
-```
-
-### 3. Truy cập ứng dụng
-
-Mở trình duyệt tại: **[http://localhost:5000](http://localhost:5000)**
-
----
-
-## 🏗️ Kiến trúc kỹ thuật
-
-- **Backend**: Flask (Python) phục vụ API và Static files.
-- **Deep Learning**: PyTorch framework.
-- **Augmentation**: Albumentations (tăng cường dữ liệu MRI).
-- **Frontend**: Vanilla JS (ES6+), Modern CSS (Glassmorphism design).
-- **Visualization**: Grad-CAM++ (Gradient-weighted Class Activation Mapping).
-
----
-
-## 🧪 Hệ thống Kiểm thử
-
-Chạy kiểm thử để đảm bảo tính ổn định của các module:
+Để ứng dụng có thể dự báo bệnh nhân, bạn phải nạp trọng số (tệp tin Checkpoint Weight / đuôi `.pth`) theo đúng cấu trúc. Cấu trúc sau sẽ nạp EfficientNet_V2_S model. Mở terminal và gõ dòng lệnh:
 
 ```bash
+python app.py --effnet_v2 checkpoints/efficientnet_v2_s/20260320_091400/efficientnet_v2_s_best.pth
+```
+
+#### 4. Sử Dụng và Khai Khác Tính Năng Web
+
+- API Interface Frontend: Mở bằng Browser thông dụng qua địa chỉ **http://localhost:5000** 🟢
+- Bạn có thể tải một tấm ảnh `JPEG` bệnh án sọ não và test dự báo thử nghiệm API System.
+
+---
+
+## 🐳 Triển Khai với Docker
+
+Kiến trúc Docker hóa mang tới việc chạy AI Platform bất kì nơi nào mà không sợ thiếu tương thích Package Python Libraries. Tốt cho Testing CICD.
+
+### Mở Node Trực Tiếp
+
+```bash
+# Lệnh Auto setup Docker Network Background chạy detached
+docker-compose up -d
+
+# Hoặc Render Single Image cho containerization có kèm quyền Hardware GPU execution (NVIDIA Runtime)
+docker build -t neuroscan-ai .
+docker run --gpus all -p 5000:5000 neuroscan-ai
+
+# Debug Logging System của Docker
+docker-compose logs -f
+```
+
+---
+
+## 📝 Scripts và Commands
+
+### ⚙️ Script Huấn Luyện AI Models Chuyên Môn
+
+Trong trường hợp chuyên gia/y khoa có thêm cơ sở dữ liệu bệnh án mới cần nâng độ chính xác của Base Model AI, phân bố vào thư mục `data/train` & `data/test`. Tiến hành nạp Model Train Parameter Setting bằng Cú pháp:
+
+```bash
+# Tiến hành Training cho dòng Model cơ sở EfficientNet bản V2 Small trong 50 Chu kì (Epoch)
+python train.py --model efficientnet_v2_s --epochs 50 --batch_size 16 --lr 0.0001
+```
+
+### 📊 Xem Dashboard Huấn Luyện AI Realtime (Sử Dụng TensorBoard)
+
+Tích hợp API Board nhằm xem Live Metrics cho Data Insight Metrics, Loss Curves:
+
+```bash
+python -m tensorboard.main --logdir checkpoints/
+# Xem thông tin thống kê qua http://localhost:6006
+```
+
+---
+
+## 📚 Tài Liệu API
+
+Nếu một Developer hay dự án Di Động muốn tích hợp Module Chuẩn Đoán U Não, dự án sử dụng Base URL Endpoint duy nhất giao tiếp qua Data Form:
+
+### `POST /predict`
+
+- **Tác vụ Server**: Xử lí Tensor phân loại khối u từ File Binary.
+- **Định dạng Request Data Body (Multipart Form-Data)**:
+  - `image` (Type: Image File / required): File ảnh MRI cần đánh giá.
+  - `gradcam_model` (Type: string / optional): Trỏ model nhận diện vẽ Explaintion bản đồ mức độ, ví trị (VD: `efficientnet_v2_s`). Mặc định auto chạy bản đồ.
+
+**Ví Dụ Request Output Json Result:**
+
+```json
+{
+  "prediction": {
+    "class": "glioma",
+    "class_vi": "U thần kinh đệm",
+    "confidence": 99.2,
+    "has_tumor": true
+  },
+  "probabilities": {
+    "glioma": { "score_pct": 99.2, "label_vi": "U thần kinh đệm" },
+    "notumor": { "score_pct": 0.5, "label_vi": "Bình thường" }
+  },
+  "gradcam": {
+    "efficientnet_v2_s": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgA..."
+  },
+  "severity": { "level": "high", "label": "Cao" },
+  "recommendation": "Cần sinh thiết và tham vấn bác sĩ..."
+}
+```
+
+---
+
+## 🧪 Testing và Quality Assurance
+
+Đồ án có hỗ trợ Module Test Automation để Tracking Test Suite cho Backend Module Layer:
+
+```bash
+# Kích hoạt toàn bộ Test Script trong folder /tests / Unit Test Validation check lỗi Logic
 python -m unittest discover tests
 ```
 
 ---
 
-## 🐳 Triển khai Docker
+## 🛠️ Công Nghệ Sử Dụng
 
-```bash
-# Build image
-docker build -t neuroscan-ai .
-
-# Chạy với hỗ trợ GPU
-docker run --gpus all -p 5000:5000 neuroscan-ai
-```
+- **Thuật Toán AI (PyTorch Core)**: Xây dựng bằng `PyTorch` thực thi `Deep Learning ConvNet` & Thuật toán hiển thị `Grad-CAM++`.
+- **System Service Web Layer (Python Flask)**: `Flask` kết nối HTTP Restful & Base Jinja Template.
+- **Thiết Kế DOM Render UI/X**: Hoạt họa trên web thông qua `HTML5/CSS3` + `Javascript Fetch Protocol`.
+- **Tăng Cường Chẩn Đoán (Albumentations)**: Hỗ trợ biến đổi dữ liệu chuyên khoa mạnh mẽ. Đầu tư Preprocessing ảnh.
+- **Container Server**: Containerizing ứng dụng đồng nhất với Engine `Docker` & `Docker Compose Multi-system`.
 
 ---
 
-## ⚠️ Khước từ trách nhiệm (Disclaimer)
+## 📞 Liên Hệ
 
-Sản phẩm này là **công cụ hỗ trợ nghiên cứu** dựa trên trí tuệ nhân tạo. Kết quả phân loại KHÔNG được coi là chẩn đoán y khoa chính thức. Mọi quyết định điều trị cần có sự tham vấn của bác sĩ chuyên khoa.
+Mọi góp ý về kiến trúc, model checkpoint hoặc có nhu cầu hợp tác tích hợp Module AI trong y tế chuyên án này, vui lòng để lại vấn đề hoặc báo lỗi trong mục Tracker Github Repo.
 
----
-
-**Hoa Giap - Quoc Dat**
+_Disclaimer: Dự án NeuroScan AI nhằm mục đích nghiên cứu Hệ thống AI/Deep Learning Y khoa tiên tiến, nội dung đánh giá có phần trăm lỗi thực tế ngụy dương/ngụy âm. Chỉ hỗ trợ, không thể đứng ra thay thế chẩn đoán sau cùng của bác sĩ._
