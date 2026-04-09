@@ -18,12 +18,7 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    # Chạy server với các checkpoint mặc định đã huấn luyện
+    # Chạy server với các checkpoint rỗng, để app tự động tìm file .pth mới nhất
     command: >
-      python app.py 
-      --resnet checkpoints/resnet50/20260314_130801/resnet50_best.pth 
-      --effnet checkpoints/efficientnet/20260314_130441/efficientnet_best.pth
-      --convnext checkpoints/convnext_small/20260320_081724/convnext_small_best.pth `
-      --effnet_v2 checkpoints/efficientnet_v2_s/20260320_091400/efficientnet_v2_s_best.pth `
-      --swin_t checkpoints/swin_t/20260325_092905/swin_t_best.pth
+      python app.py
     restart: unless-stopped

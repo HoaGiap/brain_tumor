@@ -162,10 +162,12 @@ pip install -r requirements.txt
 
 #### 3. Chạy System Framework Server API Chế Độ Dev
 
-Để ứng dụng có thể dự báo bệnh nhân, bạn phải nạp trọng số (tệp tin Checkpoint Weight / đuôi `.pth`) theo đúng cấu trúc. Cấu trúc sau sẽ nạp EfficientNet_V2_S model. Mở terminal và gõ dòng lệnh:
+Ứng dụng hiện tại đã được nâng cấp với tính năng **Tự động nhận diện trọng số mới nhất** (Auto-Detect Checkpoint). Mọi file trọng số huấn luyện (đuôi `.pth`) khi nằm trong thư mục `checkpoints/efficientnet_v2_s/` sẽ được app tự động quét và nạp file mới nhất.
+
+Mở terminal và gõ dòng lệnh cực kì đơn giản sau:
 
 ```bash
-python app.py --effnet_v2 checkpoints/efficientnet_v2_s/20260320_091400/efficientnet_v2_s_best.pth
+python app.py
 ```
 
 #### 4. Sử Dụng và Khai Khác Tính Năng Web

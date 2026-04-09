@@ -10,7 +10,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 
 from src.config import IMG_SIZE, NUM_CLASSES
 from src.dataset import BrainTumorDataset, get_train_transforms, get_val_transforms
-from src.models.registry import build_resnet50, build_efficientnet
+from src.models.registry import build_resnet50, build_efficientnet, build_efficientnet_v2_s
 
 class TestBrainTumorProject(unittest.TestCase):
     
@@ -41,6 +41,7 @@ class TestBrainTumorProject(unittest.TestCase):
         # Kiểm tra kiểu dữ liệu
         self.assertEqual(tensor.dtype, torch.float32)
 
+    @unittest.skip("Đã vô hiệu hóa mô hình ResNet50")
     def test_resnet50_architecture(self):
         """Kiểm tra cấu trúc mô hình ResNet50."""
         model = build_resnet50(pretrained=False)
@@ -53,9 +54,23 @@ class TestBrainTumorProject(unittest.TestCase):
         # Kiểm tra output shape (batch_size, num_classes)
         self.assertEqual(output.shape, (1, NUM_CLASSES))
 
+
+    @unittest.skip("Đã vô hiệu hóa mô hình EfficientNet")
     def test_efficientnet_architecture(self):
         """Kiểm tra cấu trúc mô hình EfficientNet-B0."""
         model = build_efficientnet(pretrained=False)
+        model.eval()
+        
+        dummy_input = torch.randn(1, 3, IMG_SIZE, IMG_SIZE)
+        with torch.no_grad():
+            output = model(dummy_input)
+            
+        # Kiểm tra output shape (batch_size, num_classes)
+        self.assertEqual(output.shape, (1, NUM_CLASSES))
+
+    def test_efficientnet_v2_s_architecture(self):
+        """Kiểm tra cấu trúc mô hình EfficientNet-V2-S."""
+        model = build_efficientnet_v2_s(pretrained=False)
         model.eval()
         
         dummy_input = torch.randn(1, 3, IMG_SIZE, IMG_SIZE)

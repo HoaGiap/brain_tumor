@@ -1,5 +1,7 @@
 import argparse
 import logging
+import os
+import glob
 from PIL import Image
 from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
@@ -16,8 +18,22 @@ CORS(app)
 # ─── Global Engine ─────────────────────────────────────────────────────────────
 engine = InferenceEngine()
 
+def get_latest_checkpoint(model_name: str):
+    """Finds the most recent .pth file in checkpoints/{model_name}/**/"""
+    base_dir = os.path.join("checkpoints", model_name)
+    if not os.path.exists(base_dir):
+        return None
+    
+    # Tìm tất cả file .pth
+    pth_files = glob.glob(f"{base_dir}/**/*.pth", recursive=True)
+    if not pth_files:
+        return None
+        
+    # Lấy file có thời gian sửa đổi gần nhất
+    return max(pth_files, key=os.path.getmtime)
+
 def load_models_to_engine(args):
-    """Load models based on CLI arguments."""
+    """Load models based on CLI arguments or auto-detect."""
     configs = [
         # ("resnet50",           args.resnet),
         # ("efficientnet",       args.effnet),
@@ -26,7 +42,10 @@ def load_models_to_engine(args):
         # ("swin_t",             args.swin_t),
         # ("swin_b",             args.swin_b),
     ]
-    for name, path in configs:
+    for name, arg_path in configs:
+        # Nếu user không truyền path vào, tự đi tìm file mới nhất
+        path = arg_path if arg_path else get_latest_checkpoint(name)
+        
         if path:
             if engine.load_model(name, path):
                 logger.info(f"Loaded {name} from {path}")
